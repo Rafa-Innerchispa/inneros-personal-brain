@@ -1,0 +1,57 @@
+# Judge Demo Runbook
+
+## 0. Opening
+
+> Most AI assistants start from zero. This one doesn't. It remembers my work, watches the live world, reasons about what matters to me, and can act in an isolated environment.
+
+## 1. Prove memory
+
+Ask:
+
+> What marker proves that Cognee persistent memory is working for InnerOS Personal Brain?
+
+Expected visual flow:
+
+**Recall → Cognee → Strands**
+
+The answer should recover `INNEROS_COGNEE_MEMORY_OK_20260921` from the live Cognee dataset.
+
+Point out that the graph contains entities and relationships generated from the stored memory.
+
+## 2. Prove the brain exists outside the demo
+
+Show ChatGPT connected to the InnerOS / Ralphi IA MCP.
+
+Ask a real contextual question about projects, events, or opportunities.
+
+Explain:
+
+> The web UI and ChatGPT are two clients of the same personal intelligence infrastructure.
+
+## 3. Prove live-world awareness
+
+Use the existing Bright Data MCP/provider to run a live public-web query.
+
+Show the provider evidence and current search result rather than a prepared screenshot.
+
+## 4. Prove reasoning
+
+In Personal Brain ask a question that combines remembered context with current information.
+
+AWS Strands orchestrates the reasoning while inference remains local through the OpenAI-compatible vLLM endpoint.
+
+## 5. Prove action
+
+Enable Docker Sandboxes only after `sbx ls` succeeds.
+
+Use **PREPARE ACTION**.
+
+Expected flow:
+
+**Strands → Docker Sandbox → artifact → verification → Cognee remember**
+
+The Docker executor must report `executed`; do not present a fallback as live execution.
+
+## 6. Close
+
+> It doesn't just know my files. It remembers my context, sees what is happening now, decides what matters, acts safely, verifies the result, and learns from what happened.
