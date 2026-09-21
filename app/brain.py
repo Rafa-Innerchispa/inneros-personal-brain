@@ -69,6 +69,7 @@ class PersonalBrain:
                     "LOCAL_LLM_MODEL",
                     "QuantTrio/Qwen3-Coder-30B-A3B-Instruct-AWQ",
                 ),
+                params={"tool_choice": "none"},
             )
             agent = Agent(
                 model=model,
