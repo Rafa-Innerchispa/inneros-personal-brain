@@ -174,26 +174,135 @@ class CogneeMemoryAdapter:
 
 
 class BrightDataAdapter:
-    """Consume Bright Data only through the server-side InnerOS capability."""
+    """Live Bright Data search through its official MCP, with token injected server-side.
+
+    External page/search content is treated as untrusted data. Only a bounded set
+    of result fields becomes Evidence for the reasoning layer.
+    """
 
     def __init__(self) -> None:
-        self.endpoint = os.getenv("INNEROS_BRIGHTDATA_ENDPOINT", "").rstrip("/")
-        self.token = os.getenv("INNEROS_CAPABILITY_TOKEN", "")
+        self.base = os.getenv("BRIGHTDATA_MCP_URL", "https://mcp.brightdata.com/mcp").rstrip("/")
+        self.token = os.getenv("BRIGHTDATA_API_TOKEN", "")
+
+    @staticmethod
+    def _parse_sse(text: str) -> dict:
+        payloads = []
+        for line in text.splitlines():
+            if line.startswith("data: "):
+                try:
+                    payloads.append(json.loads(line[6:]))
+                except json.JSONDecodeError:
+                    continue
+        if payloads:
+            return payloads[-1]
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            return {"raw": text[:4000]}
+
+    @staticmethod
+    def _extract_search_payload(text: str) -> dict:
+        # Bright Data wraps fetched content in a security envelope. Keep only
+        # the JSON object inside the untrusted-data markers.
+        begin = text.find("_BEGIN=====")
+        end = text.find("=====UNTRUSTED_", begin + 1) if begin >= 0 else -1
+        candidate = text[begin + len("_BEGIN====="):end] if begin >= 0 and end > begin else text
+        left = candidate.find("{")
+        right = candidate.rfind("}")
+        if left < 0 or right <= left:
+            return {}
+        try:
+            return json.loads(candidate[left:right + 1])
+        except json.JSONDecodeError:
+            return {}
 
     async def search(self, query: str, limit: int = 5) -> list[Evidence]:
-        if not self.endpoint:
+        if not self.token:
             return []
-        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(
-                f"{self.endpoint}/search",
-                json={"query": query, "limit": limit},
+
+        params = {"token": self.token}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
+        async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
+            init = await client.post(
+                self.base,
+                params=params,
                 headers=headers,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "inneros-personal-brain", "version": "0.2"},
+                    },
+                },
+            )
+            init.raise_for_status()
+            session = init.headers.get("mcp-session-id", "")
+            if session:
+                headers["mcp-session-id"] = session
+                await client.post(
+                    self.base,
+                    params=params,
+                    headers=headers,
+                    json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+                )
+
+            response = await client.post(
+                self.base,
+                params=params,
+                headers=headers,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {
+                        "name": "search_engine",
+                        "arguments": {
+                            "query": query,
+                            "engine": "google",
+                            "geo_location": "us",
+                        },
+                    },
+                },
             )
             response.raise_for_status()
-            payload = response.json()
-        items = payload.get("results", payload if isinstance(payload, list) else [])
-        return [
-            Evidence(source="brightdata", summary=str(item), metadata={"live": True})
-            for item in items[:limit]
-        ]
+            rpc = self._parse_sse(response.text)
+
+        result = (rpc.get("result") or {}) if isinstance(rpc, dict) else {}
+        if result.get("isError"):
+            return []
+
+        content = result.get("content") or []
+        merged = "\n".join(
+            str(item.get("text") or "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text"
+        )
+        payload = self._extract_search_payload(merged)
+        organic = payload.get("organic") or []
+        evidence: list[Evidence] = []
+        for item in organic[: max(1, min(limit, 10))]:
+            if not isinstance(item, dict):
+                continue
+            title = str(item.get("title") or "").strip()
+            description = str(item.get("description") or "").strip()
+            link = str(item.get("link") or "").strip()
+            summary = f"[UNTRUSTED WEB DATA] {title}: {description}".strip()
+            evidence.append(
+                Evidence(
+                    source="brightdata",
+                    summary=summary[:1800],
+                    metadata={
+                        "live": True,
+                        "untrusted_external": True,
+                        "title": title[:300],
+                        "url": link[:1200],
+                    },
+                )
+            )
+        return evidence
