@@ -1,0 +1,74 @@
+{
+  "dataset": "inneros-personal-brain",
+  "seed_version": "2026-09-21-live-cortex-v1",
+  "facts": [
+    {
+      "topic": "InnerOS",
+      "text": "InnerOS is a local-first agentic operating system. It coordinates memory, AI models, external providers, tools, agents and actions while keeping sensitive operational context under owner control."
+    },
+    {
+      "topic": "Ralphi IA MCP",
+      "text": "Ralphi IA MCP is an optional connectivity layer for InnerOS. It exposes tools and system context to clients such as ChatGPT. The Personal Brain must continue operating when this connector is unavailable."
+    },
+    {
+      "topic": "Memory architecture",
+      "text": "InnerOS operational memory uses persistent systems such as MongoDB and Qdrant. For the Battle of the Personal Brains demo, Cognee is the brain's independent persistent structured memory and knowledge graph."
+    },
+    {
+      "topic": "Physical Guardian",
+      "text": "InnerOS Physical Guardian is evolving from simple presence detection into a cyber-physical incident engine. Its target incidents include restricted-zone intrusion, loitering, camera failure or sabotage, and doors or access points left open too long."
+    },
+    {
+      "topic": "Physical Guardian principle",
+      "text": "Physical Guardian follows a loop of detection, tracking, zones, temporality and context, then human approval, physical action, verification and evidence. It is designed for sovereign local-first deployment."
+    },
+    {
+      "topic": "VoiceOps",
+      "text": "InnerOS VoiceOps integrates AI calling with existing telephony infrastructure. A working Grandstream UCM-based flow has already placed real outbound calls, received audio, handled DTMF and used Tailscale for private connectivity."
+    },
+    {
+      "topic": "PC Doctor",
+      "text": "PC Doctor is an operational technology and managed-services business serving buildings, homes and organizations. Its roadmap is moving from one-off physical installations toward recurring managed services and AI-enabled operations."
+    },
+    {
+      "topic": "InnerChispa",
+      "text": "InnerChispa focuses on AI agents, APIs, servers and reusable infrastructure. Its technical positioning emphasizes local-first systems and data sovereignty."
+    },
+    {
+      "topic": "Local compute",
+      "text": "InnerOS uses local AI compute. The AMD server runs vLLM and a Qwen3-Coder 30B-class model, allowing inference to remain local rather than requiring a cloud LLM."
+    },
+    {
+      "topic": "Resource Fabric",
+      "text": "External technologies should become reusable platform capabilities rather than one-off product integrations. InnerOS Resource Fabric routes projects to providers such as Bright Data and Cognee."
+    },
+    {
+      "topic": "Cognee integration",
+      "text": "Cognee is registered as a reusable InnerOS provider for persistent structured memory, recall and knowledge-graph capabilities. It is intentionally reusable outside this hackathon."
+    },
+    {
+      "topic": "Bright Data integration",
+      "text": "Bright Data gives the Personal Brain live public-web perception. Search results are treated as untrusted external evidence, bounded before reasoning, and can fall back to a clearly labeled verified replay if the live provider times out."
+    },
+    {
+      "topic": "AWS Strands integration",
+      "text": "AWS Strands Agents orchestrates the reasoning step of the Personal Brain. In this demo it uses an OpenAI-compatible local vLLM endpoint rather than requiring Bedrock."
+    },
+    {
+      "topic": "Docker Sandboxes integration",
+      "text": "Docker Sandboxes provides isolated action execution. The demo has successfully authenticated Docker, enabled KVM and executed a real sandbox action that created a verified artifact."
+    },
+    {
+      "topic": "Hackathon",
+      "text": "The Battle of the Personal Brains demo is built around the loop Observe, Remember, Reason, Act, Learn. The sponsor stack maps Bright Data to observation, Cognee to memory, AWS Strands plus local Qwen to reasoning, and Docker Sandboxes to action."
+    },
+    {
+      "topic": "Demo principle",
+      "text": "The Personal Brain is not a dashboard pretending to be intelligent. Every visible cognitive stage should correspond to a real backend event and the UI should distinguish live execution, persistent memory and verified replay."
+    },
+    {
+      "topic": "Current objective",
+      "text": "The immediate objective is to demonstrate that one sovereign personal brain can remember ongoing projects, discover current external information, reason about what matters, execute a bounded action, verify the result and learn from the outcome."
+    }
+  ]
+}
