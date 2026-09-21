@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 from app.adapters import (
     BrightDataAdapter,
+    CogneeCloudMemoryAdapter,
     CogneeMemoryAdapter,
     DemoMemoryAdapter,
     InnerOSMemoryAdapter,
@@ -19,7 +20,9 @@ app = FastAPI(title="InnerOS Personal Brain", version="0.2.0")
 
 
 def build_brain() -> PersonalBrain:
-    if os.getenv("USE_COGNEE", "0") == "1":
+    if os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL"):
+        memory = CogneeCloudMemoryAdapter()
+    elif os.getenv("USE_COGNEE", "0") == "1":
         memory = CogneeMemoryAdapter()
     elif os.getenv("INNEROS_MEMORY_ENDPOINT"):
         memory = InnerOSMemoryAdapter()
