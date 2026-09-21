@@ -35,6 +35,26 @@ def _run_with_kvm(argv: list[str], timeout: int = 120) -> subprocess.CompletedPr
     )
 
 
+def _with_kvm_group(argv: list[str]) -> list[str]:
+    """Run sbx with immediate kvm group membership when the current session is stale."""
+    try:
+        current = subprocess.run(
+            ["id", "-nG"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        groups = set((current.stdout or "").split())
+    except Exception:
+        groups = set()
+    if "kvm" in groups:
+        return argv
+    if shutil.which("sg"):
+        return ["sg", "kvm", "-c", shlex.join(argv)]
+    return argv
+
+
 class DockerSandboxExecutor:
     """Bounded Docker Sandboxes executor with explicit KVM group context."""
 
