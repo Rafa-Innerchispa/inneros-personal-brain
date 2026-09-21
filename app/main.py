@@ -5,7 +5,12 @@ import os
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-from app.adapters import BrightDataAdapter, CogneeMemoryAdapter, DemoMemoryAdapter
+from app.adapters import (
+    BrightDataAdapter,
+    CogneeMemoryAdapter,
+    DemoMemoryAdapter,
+    InnerOSMemoryAdapter,
+)
 from app.brain import PersonalBrain
 from app.models import BrainRequest, BrainResponse
 
@@ -15,6 +20,8 @@ app = FastAPI(title="InnerOS Personal Brain", version="0.1.0")
 def build_brain() -> PersonalBrain:
     if os.getenv("USE_COGNEE", "0") == "1":
         memory = CogneeMemoryAdapter()
+    elif os.getenv("INNEROS_MEMORY_ENDPOINT"):
+        memory = InnerOSMemoryAdapter()
     else:
         memory = DemoMemoryAdapter(
             seed=[
@@ -61,7 +68,7 @@ pre{white-space:pre-wrap}
 <h1>InnerOS Personal Brain</h1>
 <p>Remember → Discover → Reason → Act → Verify → Remember</p>
 <div class="card">
-<span class="badge">Cognee memory</span><span class="badge">Bright Data live web</span>
+<span class="badge">InnerOS + Cognee memory</span><span class="badge">Bright Data live web</span>
 <span class="badge">AWS Strands</span><span class="badge">Docker-safe actions</span>
 </div>
 <div class="card">
