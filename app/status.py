@@ -25,9 +25,13 @@ def sponsor_status() -> dict:
             "label": "Cognee structured memory",
         },
         "brightdata": {
-            "state": "connected"
-            if os.getenv("INNEROS_BRIGHTDATA_ENDPOINT")
-            else "server_capability_verified",
+            "state": "ready"
+            if os.getenv("BRIGHTDATA_API_TOKEN")
+            else (
+                "connected"
+                if os.getenv("INNEROS_BRIGHTDATA_ENDPOINT")
+                else "server_capability_verified"
+            ),
             "label": "Bright Data live web",
         },
         "strands": {
