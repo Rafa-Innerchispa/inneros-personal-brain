@@ -26,6 +26,7 @@ def main() -> int:
     model = OpenAIModel(
         client_args={"api_key": "local", "base_url": base_url},
         model_id=model_id,
+        params={"tool_choice": "none"},
     )
     agent = Agent(
         model=model,
