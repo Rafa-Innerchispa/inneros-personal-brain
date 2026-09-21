@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 import os
-import sys
 
-from strands import Agent
+from strands import Agent, tool
 from strands.models.openai import OpenAIModel
+
+
+@tool
+def evidence_marker(value: str = "ok") -> str:
+    """Return a harmless evidence marker.
+
+    Args:
+        value: Marker value.
+    """
+    return value
 
 
 def main() -> int:
@@ -20,15 +29,12 @@ def main() -> int:
     )
     agent = Agent(
         model=model,
-        system_prompt=(
-            "Reply with exactly INNEROS_STRANDS_VLLM_OK and nothing else."
-        ),
+        tools=[evidence_marker],
+        system_prompt="Reply with exactly INNEROS_STRANDS_VLLM_OK and nothing else.",
     )
-    result = str(agent("Connectivity smoke test."))
+    result = str(agent("Connectivity smoke test. Do not call tools."))
     print(result)
-    if "INNEROS_STRANDS_VLLM_OK" not in result:
-        return 2
-    return 0
+    return 0 if "INNEROS_STRANDS_VLLM_OK" in result else 2
 
 
 if __name__ == "__main__":
