@@ -4,6 +4,7 @@ import os
 from dataclasses import dataclass
 
 from app.models import BrainResponse, Evidence
+from app.sandbox import DockerSandboxExecutor
 
 
 @dataclass
@@ -27,19 +28,17 @@ class PersonalBrain:
         actions: list[dict] = []
 
         if act:
-            trace.append("act:prepare-safe-action")
-            actions.append(
-                {
-                    "type": "proposal",
-                    "status": "requires_human_approval",
-                    "summary": "Prepared a bounded next action; no external write executed automatically.",
-                }
+            trace.append("act:docker-sandbox")
+            executor = DockerSandboxExecutor()
+            sandbox_result = executor.prepare_artifact(
+                f"User request: {prompt}\n\nReasoned answer:\n{answer}"
             )
+            actions.append(sandbox_result)
 
         trace.append("verify:record-evidence")
         await self.memory.remember(
             f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
-            {"trace": trace, "action_count": len(actions)},
+            {"trace": trace, "actions": actions},
         )
         trace.append("remember:store-outcome")
 
@@ -59,7 +58,7 @@ class PersonalBrain:
             model = OpenAIModel(
                 client_args={
                     "api_key": os.getenv("LOCAL_LLM_API_KEY", "local"),
-                    "base_url": os.getenv("LOCAL_LLM_BASE_URL", "http://192.168.1.5:8000/v1"),
+                    "base_url": os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8000/v1"),
                 },
                 model_id=os.getenv(
                     "LOCAL_LLM_MODEL",
@@ -76,10 +75,14 @@ class PersonalBrain:
             )
             result = agent(f"USER REQUEST:\n{prompt}\n\nEVIDENCE:\n{context}")
             return str(result)
-        except Exception:
+        except Exception as exc:
             if context:
                 return (
                     "I combined available personal memory and live context. "
-                    f"For this request, the strongest evidence I found was:\n{context[:1800]}"
+                    f"For this request, the strongest evidence I found was:\n{context[:1800]}\n\n"
+                    f"[Strands fallback: {type(exc).__name__}]"
                 )
-            return "I do not have enough evidence yet. Add memory or enable live web search."
+            return (
+                "I do not have enough evidence yet. Add memory or enable live web search. "
+                f"[Strands fallback: {type(exc).__name__}]"
+            )
