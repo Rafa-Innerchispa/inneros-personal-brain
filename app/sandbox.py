@@ -9,22 +9,31 @@ from pathlib import Path
 from typing import Any
 
 
-class DockerSandboxExecutor:
-    """Bounded Docker Sandboxes executor.
+def _find_sbx() -> str | None:
+    configured = os.getenv("SBX_BIN", "").strip()
+    if configured and Path(configured).is_file():
+        return configured
+    system = shutil.which("sbx")
+    if system:
+        return system
+    local_root = Path(__file__).resolve().parent / ".runtime" / "docker-sbx" / "bin"
+    matches = list(local_root.rglob("sbx")) if local_root.exists() else []
+    return str(matches[0]) if matches else None
 
-    It never shells through an untrusted string. Commands are passed as argv,
-    and execution is disabled unless DOCKER_SANDBOX_ENABLED=1.
-    """
+
+class DockerSandboxExecutor:
+    """Bounded Docker Sandboxes executor."""
 
     def __init__(self, workspace: str | None = None) -> None:
         self.workspace = Path(workspace or os.getenv("BRAIN_WORKSPACE", ".")).resolve()
+        self.sbx_bin = _find_sbx()
 
     def status(self) -> dict[str, Any]:
-        binary = shutil.which("sbx")
         return {
-            "ok": bool(binary),
-            "binary_present": bool(binary),
-            "binary": binary or "",
+            "ok": bool(self.sbx_bin) and os.path.exists("/dev/kvm"),
+            "binary_present": bool(self.sbx_bin),
+            "binary": self.sbx_bin or "",
+            "kvm": os.path.exists("/dev/kvm"),
             "enabled": os.getenv("DOCKER_SANDBOX_ENABLED", "0") == "1",
             "workspace": str(self.workspace),
         }
@@ -33,12 +42,30 @@ class DockerSandboxExecutor:
         state = self.status()
         if not state["binary_present"]:
             return {**state, "ok": False, "error": "sbx_not_installed"}
+        if not state["kvm"]:
+            return {**state, "ok": False, "error": "kvm_not_available"}
+
+        auth = subprocess.run(
+            [self.sbx_bin, "ls"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+        if auth.returncode != 0:
+            return {
+                **state,
+                "ok": False,
+                "error": "docker_auth_required"
+                if "Not authenticated" in auth.stderr
+                else "sbx_status_failed",
+                "stderr": auth.stderr[-1000:],
+            }
         if not state["enabled"]:
             return {**state, "ok": False, "error": "sandbox_not_enabled"}
 
-        name = f"inneros-brain-{uuid.uuid4().hex[:8]}"
         command = [
-            "sbx",
+            self.sbx_bin,
             "run",
             "shell",
             str(self.workspace),
@@ -50,26 +77,30 @@ class DockerSandboxExecutor:
             command,
             capture_output=True,
             text=True,
-            timeout=90,
+            timeout=120,
             check=False,
         )
         return {
             **state,
             "ok": proc.returncode == 0 and "INNEROS_DOCKER_SANDBOX_OK" in proc.stdout,
-            "sandbox_name": name,
             "returncode": proc.returncode,
             "stdout": proc.stdout[-1000:],
             "stderr": proc.stderr[-1000:],
         }
 
     def prepare_artifact(self, prompt: str) -> dict[str, Any]:
-        """Prepare a bounded demo artifact inside a sandbox."""
-        state = self.status()
-        if not state["binary_present"] or not state["enabled"]:
+        state = self.smoke()
+        if not state.get("ok"):
             return {
                 "ok": False,
                 "status": "requires_runtime",
-                "reason": state.get("error") or "docker_sandbox_not_ready",
+                "provider": "docker-sandboxes",
+                "reason": state.get("error", "docker_sandbox_not_ready"),
+                "runtime": {
+                    "binary_present": state.get("binary_present"),
+                    "kvm": state.get("kvm"),
+                    "enabled": state.get("enabled"),
+                },
             }
 
         safe_prompt = prompt[:1200]
@@ -85,10 +116,10 @@ class DockerSandboxExecutor:
             )
         )
         proc = subprocess.run(
-            ["sbx", "run", "shell", str(self.workspace), "--", "-c", script],
+            [self.sbx_bin, "run", "shell", str(self.workspace), "--", "-c", script],
             capture_output=True,
             text=True,
-            timeout=120,
+            timeout=180,
             check=False,
         )
         return {
