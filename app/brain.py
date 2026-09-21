@@ -19,8 +19,22 @@ class PersonalBrain:
         trace.append("discover:query-live-web")
         web_hits: list[Evidence] = await self.web.search(prompt)
 
+        reason_memory_hits = memory_hits
+        if act:
+            historical_failure_terms = (
+                "sandboxing issue",
+                "failed due to",
+                "could not be created",
+                "requires_runtime",
+                "docker action did not complete",
+            )
+            reason_memory_hits = [
+                x for x in memory_hits
+                if not any(term in x.summary.lower() for term in historical_failure_terms)
+            ]
+
         context = "\n".join(
-            [f"MEMORY: {x.summary}" for x in memory_hits]
+            [f"MEMORY: {x.summary}" for x in reason_memory_hits]
             + [f"WEB: {x.summary}" for x in web_hits]
         )
 
@@ -92,7 +106,12 @@ class PersonalBrain:
                     "after reasoning and the verified executor result will be appended separately."
                 ),
             )
-            result = agent(f"USER REQUEST:\n{prompt}\n\nEVIDENCE:\n{context}")
+            result = agent(
+                f"USER REQUEST:\n{prompt}\n\n"
+                "CURRENT EXECUTION HAS NOT RUN YET. Discuss the opportunity and reasoning only. "
+                "Do not state that the current action succeeded or failed.\n\n"
+                f"EVIDENCE:\n{context}"
+            )
             return str(result)
         except Exception as exc:
             if context:
