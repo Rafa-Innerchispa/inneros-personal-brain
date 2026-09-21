@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from typing import Protocol
@@ -39,12 +40,7 @@ class DemoMemoryAdapter:
 
 
 class InnerOSMemoryAdapter:
-    """Reuse the existing Ralphi/InnerOS memory surface without copying data.
-
-    Expected server-side contract:
-      POST /search   {"query": "...", "limit": 8}
-      POST /remember {"text": "...", "metadata": {...}}
-    """
+    """Reuse the existing Ralphi/InnerOS memory surface without copying data."""
 
     def __init__(self) -> None:
         self.endpoint = os.getenv("INNEROS_MEMORY_ENDPOINT", "").rstrip("/")
@@ -89,24 +85,90 @@ class InnerOSMemoryAdapter:
             response.raise_for_status()
 
 
+class CogneeCloudMemoryAdapter:
+    """Live Cognee Cloud memory through the tenant's documented HTTP contract."""
+
+    def __init__(self) -> None:
+        self.base = os.getenv("COGNEE_SERVICE_URL", "").rstrip("/")
+        self.key = os.getenv("COGNEE_API_KEY", "")
+        self.dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
+
+    def _headers(self) -> dict[str, str]:
+        return {"X-Api-Key": self.key}
+
+    async def search(self, query: str, limit: int = 8) -> list[Evidence]:
+        if not self.base or not self.key:
+            return []
+        payload = {
+            "searchType": None,
+            "datasets": [self.dataset],
+            "query": query,
+            "topK": max(1, min(limit, 20)),
+            "onlyContext": True,
+            "verbose": True,
+        }
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(
+                f"{self.base}/api/v1/recall",
+                headers=self._headers(),
+                json=payload,
+            )
+            response.raise_for_status()
+            rows = response.json()
+        if not isinstance(rows, list):
+            rows = [rows]
+        return [
+            Evidence(
+                source="cognee",
+                summary=str(row.get("text") if isinstance(row, dict) else row),
+                metadata={
+                    "dataset": self.dataset,
+                    "search_type": row.get("search_type") if isinstance(row, dict) else None,
+                    "live": True,
+                },
+            )
+            for row in rows[:limit]
+        ]
+
+    async def remember(self, text: str, metadata: dict | None = None) -> None:
+        if not self.base or not self.key:
+            return
+        envelope = text if not metadata else json.dumps(
+            {"text": text, "metadata": metadata},
+            ensure_ascii=False,
+            default=str,
+        )
+        files = [
+            ("raw_data", (None, envelope)),
+            ("datasetName", (None, self.dataset)),
+            ("run_in_background", (None, "true")),
+            ("node_set", (None, "personal-brain-demo")),
+        ]
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(
+                f"{self.base}/api/v1/remember",
+                headers=self._headers(),
+                files=files,
+            )
+            response.raise_for_status()
+
+
 class CogneeMemoryAdapter:
-    """Optional local/self-hosted Cognee adapter."""
+    """Optional local/self-hosted Cognee SDK adapter."""
 
     def __init__(self, dataset_name: str = "inneros-personal-brain") -> None:
         self.dataset_name = dataset_name
 
     async def search(self, query: str, limit: int = 8) -> list[Evidence]:
         import cognee
-
         results = await cognee.search(query_text=query)
         return [
-            Evidence(source="cognee", summary=str(item), metadata={"dataset": self.dataset_name})
+            Evidence(source="cognee-local", summary=str(item), metadata={"dataset": self.dataset_name})
             for item in list(results)[:limit]
         ]
 
     async def remember(self, text: str, metadata: dict | None = None) -> None:
         import cognee
-
         await cognee.add(text, dataset_name=self.dataset_name)
         await cognee.cognify()
 
