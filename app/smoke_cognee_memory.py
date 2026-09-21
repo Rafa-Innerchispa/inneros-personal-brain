@@ -25,7 +25,7 @@ def main() -> int:
     base = e["COGNEE_SERVICE_URL"].rstrip("/")
     dataset = e.get("COGNEE_DATASET", "inneros-personal-brain")
     key = e["COGNEE_API_KEY"]
-    headers = {"X-Api-Key": key, "Authorization": f"Bearer {key}"}
+    headers = {"X-Api-Key": key}
 
     memory = (
         f"{MARKER}. InnerOS Personal Brain uses Cognee for persistent structured memory. "
