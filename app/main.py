@@ -17,6 +17,7 @@ from app.adapters import (
     InnerOSMemoryAdapter,
 )
 from app.brain import PersonalBrain
+from app.demo_memory import seed_in_background, seed_status
 from app.models import BrainRequest, BrainResponse
 from app.status import sponsor_status
 
@@ -55,9 +56,16 @@ async def health() -> dict:
     return {"ok": True, "service": "inneros-personal-brain", "version": "0.3.0"}
 
 
+@app.on_event("startup")
+async def startup_seed_memory() -> None:
+    asyncio.create_task(seed_in_background())
+
+
 @app.get("/api/status")
 async def status() -> dict:
-    return sponsor_status()
+    data = sponsor_status()
+    data["memory_seed"] = seed_status()
+    return data
 
 
 @app.post("/api/brain", response_model=BrainResponse)
