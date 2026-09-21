@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Protocol
 
 import httpx
@@ -174,15 +175,23 @@ class CogneeMemoryAdapter:
 
 
 class BrightDataAdapter:
-    """Live Bright Data search through its official MCP, with token injected server-side.
+    """Live Bright Data search with verified-replay resilience.
 
-    External page/search content is treated as untrusted data. Only a bounded set
-    of result fields becomes Evidence for the reasoning layer.
+    External content is untrusted. Only bounded search result fields become
+    Evidence. Successful live searches are cached locally so a venue/network
+    timeout can replay the last verified Bright Data result without pretending
+    it is live.
     """
 
     def __init__(self) -> None:
         self.base = os.getenv("BRIGHTDATA_MCP_URL", "https://mcp.brightdata.com/mcp").rstrip("/")
         self.token = os.getenv("BRIGHTDATA_API_TOKEN", "")
+        self.cache_path = Path(
+            os.getenv(
+                "BRIGHTDATA_REPLAY_CACHE",
+                str(Path(__file__).resolve().parent / ".runtime" / "brightdata_last.json"),
+            )
+        )
 
     @staticmethod
     def _parse_sse(text: str) -> dict:
@@ -202,8 +211,6 @@ class BrightDataAdapter:
 
     @staticmethod
     def _extract_search_payload(text: str) -> dict:
-        # Bright Data wraps fetched content in a security envelope. Keep only
-        # the JSON object inside the untrusted-data markers.
         begin = text.find("_BEGIN=====")
         end = text.find("=====UNTRUSTED_", begin + 1) if begin >= 0 else -1
         candidate = text[begin + len("_BEGIN====="):end] if begin >= 0 and end > begin else text
@@ -216,75 +223,7 @@ class BrightDataAdapter:
         except json.JSONDecodeError:
             return {}
 
-    async def search(self, query: str, limit: int = 5) -> list[Evidence]:
-        if not self.token:
-            return []
-
-        params = {"token": self.token}
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-        }
-        async with httpx.AsyncClient(timeout=90, follow_redirects=True) as client:
-            init = await client.post(
-                self.base,
-                params=params,
-                headers=headers,
-                json={
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "initialize",
-                    "params": {
-                        "protocolVersion": "2025-06-18",
-                        "capabilities": {},
-                        "clientInfo": {"name": "inneros-personal-brain", "version": "0.2"},
-                    },
-                },
-            )
-            init.raise_for_status()
-            session = init.headers.get("mcp-session-id", "")
-            if session:
-                headers["mcp-session-id"] = session
-                await client.post(
-                    self.base,
-                    params=params,
-                    headers=headers,
-                    json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
-                )
-
-            response = await client.post(
-                self.base,
-                params=params,
-                headers=headers,
-                json={
-                    "jsonrpc": "2.0",
-                    "id": 2,
-                    "method": "tools/call",
-                    "params": {
-                        "name": "search_engine",
-                        "arguments": {
-                            "query": query,
-                            "engine": "google",
-                            "geo_location": "us",
-                        },
-                    },
-                },
-            )
-            response.raise_for_status()
-            rpc = self._parse_sse(response.text)
-
-        result = (rpc.get("result") or {}) if isinstance(rpc, dict) else {}
-        if result.get("isError"):
-            return []
-
-        content = result.get("content") or []
-        merged = "\n".join(
-            str(item.get("text") or "")
-            for item in content
-            if isinstance(item, dict) and item.get("type") == "text"
-        )
-        payload = self._extract_search_payload(merged)
-        organic = payload.get("organic") or []
+    def _to_evidence(self, organic: list[dict], limit: int, *, replay: bool) -> list[Evidence]:
         evidence: list[Evidence] = []
         for item in organic[: max(1, min(limit, 10))]:
             if not isinstance(item, dict):
@@ -292,13 +231,14 @@ class BrightDataAdapter:
             title = str(item.get("title") or "").strip()
             description = str(item.get("description") or "").strip()
             link = str(item.get("link") or "").strip()
-            summary = f"[UNTRUSTED WEB DATA] {title}: {description}".strip()
+            prefix = "[VERIFIED REPLAY][UNTRUSTED WEB DATA]" if replay else "[UNTRUSTED WEB DATA]"
             evidence.append(
                 Evidence(
                     source="brightdata",
-                    summary=summary[:1800],
+                    summary=f"{prefix} {title}: {description}"[:1800],
                     metadata={
-                        "live": True,
+                        "live": not replay,
+                        "verified_replay": replay,
                         "untrusted_external": True,
                         "title": title[:300],
                         "url": link[:1200],
@@ -306,3 +246,99 @@ class BrightDataAdapter:
                 )
             )
         return evidence
+
+    def _read_cache(self, limit: int) -> list[Evidence]:
+        try:
+            payload = json.loads(self.cache_path.read_text(encoding="utf-8"))
+            organic = payload.get("organic") or []
+            return self._to_evidence(organic, limit, replay=True)
+        except Exception:
+            return []
+
+    def _write_cache(self, organic: list[dict]) -> None:
+        try:
+            self.cache_path.parent.mkdir(parents=True, exist_ok=True)
+            self.cache_path.write_text(
+                json.dumps({"provider": "brightdata", "organic": organic}, ensure_ascii=False),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+
+    async def search(self, query: str, limit: int = 5) -> list[Evidence]:
+        if not self.token:
+            return self._read_cache(limit)
+
+        params = {"token": self.token}
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        }
+        timeout = httpx.Timeout(24.0, connect=10.0)
+        try:
+            async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
+                init = await client.post(
+                    self.base,
+                    params=params,
+                    headers=headers,
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "initialize",
+                        "params": {
+                            "protocolVersion": "2025-06-18",
+                            "capabilities": {},
+                            "clientInfo": {"name": "inneros-personal-brain", "version": "0.3"},
+                        },
+                    },
+                )
+                init.raise_for_status()
+                session = init.headers.get("mcp-session-id", "")
+                if session:
+                    headers["mcp-session-id"] = session
+                    await client.post(
+                        self.base,
+                        params=params,
+                        headers=headers,
+                        json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+                    )
+
+                response = await client.post(
+                    self.base,
+                    params=params,
+                    headers=headers,
+                    json={
+                        "jsonrpc": "2.0",
+                        "id": 2,
+                        "method": "tools/call",
+                        "params": {
+                            "name": "search_engine",
+                            "arguments": {
+                                "query": query[:500],
+                                "engine": "google",
+                                "geo_location": "us",
+                            },
+                        },
+                    },
+                )
+                response.raise_for_status()
+                rpc = self._parse_sse(response.text)
+
+            result = (rpc.get("result") or {}) if isinstance(rpc, dict) else {}
+            if result.get("isError"):
+                return self._read_cache(limit)
+
+            content = result.get("content") or []
+            merged = "\n".join(
+                str(item.get("text") or "")
+                for item in content
+                if isinstance(item, dict) and item.get("type") == "text"
+            )
+            payload = self._extract_search_payload(merged)
+            organic = payload.get("organic") or []
+            if organic:
+                self._write_cache(organic)
+                return self._to_evidence(organic, limit, replay=False)
+            return self._read_cache(limit)
+        except (httpx.TimeoutException, httpx.HTTPError):
+            return self._read_cache(limit)
