@@ -38,11 +38,59 @@ class DemoMemoryAdapter:
         self.seed.append(text)
 
 
-class CogneeMemoryAdapter:
-    """Optional local/self-hosted Cognee adapter.
+class InnerOSMemoryAdapter:
+    """Reuse the existing Ralphi/InnerOS memory surface without copying data.
 
-    The import is lazy so the app still runs before Cognee is installed.
+    Expected server-side contract:
+      POST /search   {"query": "...", "limit": 8}
+      POST /remember {"text": "...", "metadata": {...}}
     """
+
+    def __init__(self) -> None:
+        self.endpoint = os.getenv("INNEROS_MEMORY_ENDPOINT", "").rstrip("/")
+        self.token = os.getenv("INNEROS_CAPABILITY_TOKEN", "")
+
+    def _headers(self) -> dict[str, str]:
+        return {"Authorization": f"Bearer {self.token}"} if self.token else {}
+
+    async def search(self, query: str, limit: int = 8) -> list[Evidence]:
+        if not self.endpoint:
+            return []
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                f"{self.endpoint}/search",
+                json={"query": query, "limit": limit},
+                headers=self._headers(),
+            )
+            response.raise_for_status()
+            payload = response.json()
+
+        items = payload.get("results", payload if isinstance(payload, list) else [])
+        evidence: list[Evidence] = []
+        for item in items[:limit]:
+            if isinstance(item, dict):
+                summary = item.get("text") or item.get("summary") or item.get("title") or str(item)
+                source = item.get("source", "inneros-memory")
+                metadata = {k: v for k, v in item.items() if k not in {"text", "summary"}}
+            else:
+                summary, source, metadata = str(item), "inneros-memory", {}
+            evidence.append(Evidence(source=source, summary=summary, metadata=metadata))
+        return evidence
+
+    async def remember(self, text: str, metadata: dict | None = None) -> None:
+        if not self.endpoint:
+            return
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                f"{self.endpoint}/remember",
+                json={"text": text, "metadata": metadata or {}},
+                headers=self._headers(),
+            )
+            response.raise_for_status()
+
+
+class CogneeMemoryAdapter:
+    """Optional local/self-hosted Cognee adapter."""
 
     def __init__(self, dataset_name: str = "inneros-personal-brain") -> None:
         self.dataset_name = dataset_name
@@ -64,10 +112,7 @@ class CogneeMemoryAdapter:
 
 
 class BrightDataAdapter:
-    """Adapter for an InnerOS server-side Bright Data capability endpoint.
-
-    The browser/app never receives the Bright Data API token.
-    """
+    """Consume Bright Data only through the server-side InnerOS capability."""
 
     def __init__(self) -> None:
         self.endpoint = os.getenv("INNEROS_BRIGHTDATA_ENDPOINT", "").rstrip("/")
