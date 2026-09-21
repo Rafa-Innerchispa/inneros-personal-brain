@@ -120,7 +120,7 @@ class DockerSandboxExecutor:
         python_code = (
             "import json, pathlib; "
             f"data=json.loads({payload!r}); "
-            "p=pathlib.Path('/workspace/PERSONAL_BRAIN_ACTION.md'); "
+            "p=pathlib.Path.cwd() / 'PERSONAL_BRAIN_ACTION.md'; "
             "p.write_text('# Personal Brain Action\\n\\n'+data['request']+'\\n', encoding='utf-8'); "
             "print(str(p))"
         )
