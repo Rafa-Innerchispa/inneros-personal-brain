@@ -15,7 +15,7 @@ def sponsor_status() -> dict:
     docker = DockerSandboxExecutor().smoke()
     return {
         "inneros_mcp": {
-            "state": "connected" if os.getenv("INNEROS_MEMORY_ENDPOINT") else "bridge_pending",
+            "state": "connected" if (os.getenv("INNEROS_MEMORY_ENDPOINT") or os.getenv("INNEROS_MCP_URL")) else "bridge_pending",
             "label": "InnerOS MCP / memory",
         },
         "cognee": {
