@@ -1,10 +1,15 @@
 from __future__ import annotations
 
+import inspect
 import os
 from dataclasses import dataclass
+from typing import Awaitable, Callable
 
 from app.models import BrainResponse, Evidence
 from app.sandbox import DockerSandboxExecutor
+
+
+EventEmitter = Callable[[dict], Awaitable[None] | None]
 
 
 @dataclass
@@ -12,12 +17,56 @@ class PersonalBrain:
     memory: object
     web: object
 
-    async def answer(self, prompt: str, act: bool = False) -> BrainResponse:
+    async def _emit(self, emitter: EventEmitter | None, event: dict) -> None:
+        if emitter is None:
+            return
+        result = emitter(event)
+        if inspect.isawaitable(result):
+            await result
+
+    async def answer(
+        self,
+        prompt: str,
+        act: bool = False,
+        emit: EventEmitter | None = None,
+    ) -> BrainResponse:
         trace = ["remember:query-memory"]
+        await self._emit(emit, {
+            "stage": "remember",
+            "technology": "cognee",
+            "state": "active",
+            "message": "Recalling persistent memory from Cognee",
+        })
         memory_hits: list[Evidence] = await self.memory.search(prompt)
+        await self._emit(emit, {
+            "stage": "remember",
+            "technology": "cognee",
+            "state": "complete",
+            "message": f"Recovered {len(memory_hits)} relevant memory items",
+            "count": len(memory_hits),
+        })
 
         trace.append("discover:query-live-web")
+        await self._emit(emit, {
+            "stage": "observe",
+            "technology": "brightdata",
+            "state": "active",
+            "message": "Searching the live web with Bright Data",
+        })
         web_hits: list[Evidence] = await self.web.search(prompt)
+        replay = any(bool(x.metadata.get("verified_replay")) for x in web_hits)
+        await self._emit(emit, {
+            "stage": "observe",
+            "technology": "brightdata",
+            "state": "complete",
+            "message": (
+                f"Loaded {len(web_hits)} verified replay results"
+                if replay
+                else f"Found {len(web_hits)} live web results"
+            ),
+            "count": len(web_hits),
+            "mode": "verified-replay" if replay else "live",
+        })
 
         reason_memory_hits = memory_hits
         if act:
@@ -29,7 +78,8 @@ class PersonalBrain:
                 "docker action did not complete",
             )
             reason_memory_hits = [
-                x for x in memory_hits
+                x
+                for x in memory_hits
                 if not any(term in x.summary.lower() for term in historical_failure_terms)
             ]
 
@@ -38,11 +88,41 @@ class PersonalBrain:
             + [f"WEB: {x.summary}" for x in web_hits]
         )
 
+        await self._emit(emit, {
+            "stage": "reason",
+            "technology": "strands",
+            "state": "active",
+            "message": "AWS Strands is orchestrating the reasoning path",
+        })
+        await self._emit(emit, {
+            "stage": "reason",
+            "technology": "local_model",
+            "state": "active",
+            "message": "Local Qwen/vLLM is synthesizing the answer",
+        })
         answer = await self._reason(prompt, context)
-        actions: list[dict] = []
+        await self._emit(emit, {
+            "stage": "reason",
+            "technology": "local_model",
+            "state": "complete",
+            "message": "Local inference complete",
+        })
+        await self._emit(emit, {
+            "stage": "reason",
+            "technology": "strands",
+            "state": "complete",
+            "message": "Reasoning plan complete",
+        })
 
+        actions: list[dict] = []
         if act:
             trace.append("act:docker-sandbox")
+            await self._emit(emit, {
+                "stage": "act",
+                "technology": "docker",
+                "state": "active",
+                "message": "Executing a bounded action in Docker Sandbox",
+            })
             executor = DockerSandboxExecutor()
             sandbox_result = executor.prepare_artifact(
                 f"User request: {prompt}\n\nReasoned answer:\n{answer}"
@@ -53,18 +133,42 @@ class PersonalBrain:
                     "\n\nEXECUTION EVIDENCE: Docker Sandbox executed the action successfully. "
                     f"Artifact: {sandbox_result.get('artifact', 'created')}."
                 )
+                await self._emit(emit, {
+                    "stage": "act",
+                    "technology": "docker",
+                    "state": "complete",
+                    "message": f"Artifact executed: {sandbox_result.get('artifact', 'created')}",
+                })
             else:
                 answer += (
                     "\n\nEXECUTION EVIDENCE: The current Docker action did not complete. "
                     f"Status: {sandbox_result.get('status', 'unknown')}."
                 )
+                await self._emit(emit, {
+                    "stage": "act",
+                    "technology": "docker",
+                    "state": "error",
+                    "message": f"Action status: {sandbox_result.get('status', 'unknown')}",
+                })
 
         trace.append("verify:record-evidence")
+        await self._emit(emit, {
+            "stage": "learn",
+            "technology": "cognee",
+            "state": "active",
+            "message": "Writing the verified outcome back to persistent memory",
+        })
         await self.memory.remember(
             f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
             {"trace": trace, "actions": actions},
         )
         trace.append("remember:store-outcome")
+        await self._emit(emit, {
+            "stage": "learn",
+            "technology": "cognee",
+            "state": "complete",
+            "message": "Outcome stored in Cognee",
+        })
 
         return BrainResponse(
             answer=answer,
