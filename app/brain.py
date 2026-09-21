@@ -52,8 +52,13 @@ class PersonalBrain:
 
     async def _reason(self, prompt: str, context: str) -> str:
         try:
-            from strands import Agent
+            from strands import Agent, tool
             from strands.models.openai import OpenAIModel
+
+            @tool
+            def evidence_marker(value: str = "ok") -> str:
+                """Return a harmless marker for OpenAI-compatible tool schemas."""
+                return value
 
             model = OpenAIModel(
                 client_args={
@@ -67,6 +72,7 @@ class PersonalBrain:
             )
             agent = Agent(
                 model=model,
+                tools=[evidence_marker],
                 system_prompt=(
                     "You are InnerOS Personal Brain. Use memory and live-web evidence. "
                     "Be concise, distinguish remembered facts from live findings, and never "
