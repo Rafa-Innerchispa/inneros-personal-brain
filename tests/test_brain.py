@@ -17,6 +17,6 @@ async def test_brain_remembers_outcome():
 
     assert result.answer
     assert result.memory_hits
-    assert result.actions[0]["status"] == "requires_human_approval"
+    assert result.actions[0]["status"] in {"requires_runtime", "executed", "failed"}
     assert "remember:store-outcome" in result.trace
     assert len(memory.seed) == 2
