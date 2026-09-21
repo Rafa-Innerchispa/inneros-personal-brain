@@ -19,7 +19,7 @@ The hackathon application is a thin product layer over the existing InnerOS / Ra
 | Cognee | Persistent structured memory and knowledge graph | Real Cloud remember + recall smoke passes |
 | Bright Data | Live public-web intelligence | Existing InnerOS provider/MCP performs real searches |
 | AWS Strands Agents | Reasoning and tool orchestration | Real Strands agent runs against local vLLM/Qwen3 |
-| Docker Sandboxes | Isolated action execution | Runtime installed on KVM-capable host; owner login required before first sandbox |
+| Docker Sandboxes | Isolated action execution | Authenticated KVM sandbox executes and verifies a real artifact |
 
 ## Architecture
 
@@ -71,9 +71,11 @@ Secrets are ignored by Git and never embedded in the frontend.
 - Cognee remember → knowledge graph → recall: PASS
 - FastAPI health/status/UI: PASS
 - Personal Brain API Cognee → Strands → remember outcome: PASS
-- Bright Data account/MCP/search: PASS through InnerOS provider
+- Bright Data account/MCP/search: PASS; live search plus clearly labeled verified-replay fallback
 - Docker/KVM/sbx installation: PASS
-- Docker account authentication: pending owner device approval
+- Docker account authentication: PASS
+- Docker Sandbox real action artifact: PASS
+- Four-sponsor E2E: PASS (`all_four_green: true`)
 
 ## Run locally
 
@@ -88,4 +90,4 @@ Runtime credentials belong in protected environment configuration, never in Git.
 
 ## Safety
 
-External actions are evidence-gated. The system does not claim an action ran unless its executor returns evidence. Docker execution stays disabled until the sandbox runtime is authenticated and verified.
+External actions are evidence-gated. The system does not claim an action ran unless its executor returns evidence. Bright Data falls back only to a clearly labeled verified replay when the live provider times out.
