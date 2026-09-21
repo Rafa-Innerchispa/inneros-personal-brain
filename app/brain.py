@@ -34,6 +34,16 @@ class PersonalBrain:
                 f"User request: {prompt}\n\nReasoned answer:\n{answer}"
             )
             actions.append(sandbox_result)
+            if sandbox_result.get("ok") and sandbox_result.get("status") == "executed":
+                answer += (
+                    "\n\nEXECUTION EVIDENCE: Docker Sandbox executed the action successfully. "
+                    f"Artifact: {sandbox_result.get('artifact', 'created')}."
+                )
+            else:
+                answer += (
+                    "\n\nEXECUTION EVIDENCE: The current Docker action did not complete. "
+                    f"Status: {sandbox_result.get('status', 'unknown')}."
+                )
 
         trace.append("verify:record-evidence")
         await self.memory.remember(
@@ -76,8 +86,10 @@ class PersonalBrain:
                 tools=[evidence_marker],
                 system_prompt=(
                     "You are InnerOS Personal Brain. Use memory and live-web evidence. "
-                    "Be concise, distinguish remembered facts from live findings, and never "
-                    "claim an external action was executed unless evidence says so."
+                    "Be concise and distinguish remembered facts from live findings. "
+                    "Historical memories can describe older execution failures; treat those only as historical. "
+                    "Do not predict or describe the outcome of the current action because execution happens "
+                    "after reasoning and the verified executor result will be appended separately."
                 ),
             )
             result = agent(f"USER REQUEST:\n{prompt}\n\nEVIDENCE:\n{context}")
