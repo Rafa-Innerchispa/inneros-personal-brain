@@ -21,7 +21,7 @@ def main() -> int:
     env = load_env()
     base = env["COGNEE_SERVICE_URL"].rstrip("/")
     key = env["COGNEE_API_KEY"]
-    headers = {"X-Api-Key": key, "Authorization": f"Bearer {key}"}
+    headers = {"X-Api-Key": key}
     out: dict = {"base_configured": True, "credential_present": bool(key)}
 
     with httpx.Client(timeout=30, follow_redirects=True) as client:
