@@ -1,5 +1,16 @@
 # InnerOS Personal Brain
 
+<!-- INNEROS-NARRATIVE:START -->
+> **InnerOS role:** Product  
+> **Lifecycle:** Active  
+> **Lineage:** Living InnerOS product; Battle of the Personal Brains 2026 validated Cognee, Bright Data, AWS Strands, and Docker Sandbox integrations.
+>
+> Personal Brain is the cognitive and memory layer of InnerOS: durable context, live perception, governed reasoning, and cross-agent memory.
+>
+> **InnerOS principle:** hackathons are validation environments. Reusable capabilities are extracted into maintained products and platform layers rather than treated as disconnected one-off projects.
+<!-- INNEROS-NARRATIVE:END -->
+
+
 **A sovereign cognitive layer for InnerOS that remembers, discovers, reasons, acts, verifies, and learns across agents.**
 
 InnerOS Personal Brain is a **living InnerOS product**, not a hackathon snapshot. It combines shared long-term memory, live external context, local-first inference, agent orchestration, governed execution, and visible evidence.
