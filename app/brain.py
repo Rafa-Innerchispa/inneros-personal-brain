@@ -367,27 +367,37 @@ class PersonalBrain:
                 })
 
         trace.append("verify:record-evidence")
-        stages_executed.append("learn")
-        await self._emit(emit, {
-            "stage": "learn",
-            "technology": "cognee",
-            "state": "active",
-            "message": "Writing the verified outcome back to persistent memory",
-            "dataset": dataset,
-        })
-        await self.memory.remember(
-            f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
-            {"trace": trace, "actions": actions},
-        )
-        tool_calls["cognee_remember"] += 1
-        trace.append("remember:store-outcome")
-        await self._emit(emit, {
-            "stage": "learn",
-            "technology": "cognee",
-            "state": "complete",
-            "message": "Outcome stored in Cognee",
-            "dataset": dataset,
-        })
+        if route["mode"] == "local_only":
+            trace.append("remember:write-skipped-by-route")
+            await self._emit(emit, {
+                "stage": "learn",
+                "technology": "cognee",
+                "state": "complete",
+                "message": "Cognee write skipped by LOCAL ONLY route",
+                "dataset": dataset,
+            })
+        else:
+            stages_executed.append("learn")
+            await self._emit(emit, {
+                "stage": "learn",
+                "technology": "cognee",
+                "state": "active",
+                "message": "Writing the verified outcome back to persistent memory",
+                "dataset": dataset,
+            })
+            await self.memory.remember(
+                f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
+                {"trace": trace, "actions": actions},
+            )
+            tool_calls["cognee_remember"] += 1
+            trace.append("remember:store-outcome")
+            await self._emit(emit, {
+                "stage": "learn",
+                "technology": "cognee",
+                "state": "complete",
+                "message": "Outcome stored in Cognee",
+                "dataset": dataset,
+            })
 
         fallback_reason = ""
         if "[Strands fallback:" in answer:
