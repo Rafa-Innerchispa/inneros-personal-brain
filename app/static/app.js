@@ -45,6 +45,7 @@ let stageTimer = null;
 let cortex = null;
 
 const cortexNodes = {
+  input: { x: 0.08, y: 0.16, color: "#f3f7fb", label: "Prompt" },
   inneros_mcp: { x: 0.20, y: 0.51, color: "#d6b46a", label: "InnerOS" },
   local_model: { x: 0.30, y: 0.34, color: "#aeb8c8", label: "Qwen" },
   govern: { x: 0.29, y: 0.67, color: "#8ba7bd", label: "Govern" },
@@ -65,6 +66,22 @@ const cortexFlows = {
   bridge: ["cognee", "bridge"],
   inneros_mcp: ["inneros_mcp", "strands"],
 };
+
+function stageLinks(stage, tech) {
+  const target = tech || stageTech[stage] || "strands";
+  const links = [["input", target]];
+  if (stage === "remember") links.push(["cognee", "strands"]);
+  else if (stage === "inject") links.push(["cognee", "strands"]);
+  else if (stage === "observe") links.push(["brightdata", "strands"]);
+  else if (stage === "reason" && target === "local_model") links.push(["strands", "local_model"]);
+  else if (stage === "reason") links.push(["strands", "cognee"]);
+  else if (stage === "audit") links.push(["strands", "cognee"]);
+  else if (stage === "govern") links.push(["strands", "govern"]);
+  else if (stage === "act") links.push(["govern", "docker"]);
+  else if (stage === "learn") links.push(["strands", "cognee"], ["cognee", "bridge"]);
+  else if (cortexFlows[target]) links.push(cortexFlows[target]);
+  return links.filter(([from, to]) => cortexNodes[from] && cortexNodes[to]);
+}
 
 const cortexPieces = {
   local: [
@@ -168,6 +185,9 @@ function setupCortex() {
     activeTech: "",
     activeStage: "",
     lastTech: "",
+    activeLinks: [],
+    completedLinks: [],
+    completedTech: new Set(),
     particles: [],
     startedAt: performance.now(),
   };
@@ -193,19 +213,25 @@ function nodePoint(key) {
   };
 }
 
-function spawnFlow(tech, count = 7) {
+function spawnLink(fromKey, toKey, color, count = 7) {
   if (!cortex) return;
-  const flow = cortexFlows[tech] || cortexFlows.strands;
   for (let i = 0; i < count; i += 1) {
     cortex.particles.push({
-      from: flow[0],
-      to: flow[1],
+      from: fromKey,
+      to: toKey,
       t: -i * 0.08,
       speed: 0.011 + Math.random() * 0.009,
       size: 2.2 + Math.random() * 2.4,
-      color: cortexNodes[tech]?.color || "#80c7ff",
+      color: color || cortexNodes[toKey]?.color || "#80c7ff",
     });
   }
+}
+
+function spawnFlow(tech, count = 7, stage = "") {
+  if (!cortex) return;
+  stageLinks(stage, tech).forEach(([from, to], index) => {
+    spawnLink(from, to, cortexNodes[to]?.color || cortexNodes[tech]?.color || "#80c7ff", Math.max(4, count - index * 2));
+  });
 }
 
 function brainPath(ctx, cx, cy, rx, ry) {
@@ -343,23 +369,29 @@ function drawBrainPieces(ctx, brain, pieces, activeKeys, time) {
   ctx.restore();
 }
 
-function drawConnection(ctx, fromKey, toKey, activeColor, active) {
+function linkKey(fromKey, toKey) {
+  return `${fromKey}->${toKey}`;
+}
+
+function drawConnection(ctx, fromKey, toKey, activeColor, state) {
   const from = nodePoint(fromKey);
   const to = nodePoint(toKey);
   const mx = (from.x + to.x) / 2;
   const my = (from.y + to.y) / 2 - cortex.canvas.height * 0.08;
   ctx.save();
   const pulse = (performance.now() - cortex.startedAt) / 1000;
+  const active = state === "active";
+  const complete = state === "complete";
   for (let i = 0; i < 3; i += 1) {
     const offset = (i - 1) * 11;
     ctx.beginPath();
     ctx.moveTo(from.x, from.y + offset);
     ctx.bezierCurveTo(mx, my + offset * 0.2, mx, my + offset * -0.2, to.x, to.y - offset);
-    ctx.strokeStyle = active ? activeColor : "rgba(196, 222, 231, 0.16)";
-    ctx.globalAlpha = active ? 0.72 - i * 0.12 : 0.28 - i * 0.04;
-    ctx.lineWidth = active ? 2.4 : 1.0;
-    ctx.setLineDash(active ? [2, 10] : [1, 12]);
-    ctx.lineDashOffset = -(pulse * 44 + i * 9);
+    ctx.strokeStyle = active || complete ? activeColor : "rgba(196, 222, 231, 0.13)";
+    ctx.globalAlpha = active ? 0.82 - i * 0.12 : complete ? 0.42 - i * 0.07 : 0.22 - i * 0.04;
+    ctx.lineWidth = active ? 2.8 : complete ? 1.8 : 1.0;
+    ctx.setLineDash(active ? [2, 9] : complete ? [5, 11] : [1, 13]);
+    ctx.lineDashOffset = active ? -(pulse * 54 + i * 9) : -(pulse * 12 + i * 4);
     ctx.stroke();
   }
   ctx.restore();
@@ -367,19 +399,26 @@ function drawConnection(ctx, fromKey, toKey, activeColor, active) {
 
 function drawNode(ctx, key) {
   const p = nodePoint(key);
-  const active = cortex.activeTech === key || cortex.lastTech === key;
+  const active = cortex.activeTech === key;
+  const complete = cortex.completedTech?.has(key) || cortex.lastTech === key;
   ctx.save();
   ctx.shadowColor = p.color;
-  ctx.shadowBlur = active ? 26 : 8;
+  ctx.shadowBlur = active ? 30 : complete ? 16 : 6;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, active ? 8 : 5, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, active ? 8 : complete ? 6 : 4.5, 0, Math.PI * 2);
   ctx.fillStyle = p.color;
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(p.x, p.y, active ? 18 : 12, 0, Math.PI * 2);
-  ctx.strokeStyle = active ? p.color : "rgba(210, 237, 246, 0.28)";
-  ctx.lineWidth = active ? 2.1 : 1.0;
+  ctx.arc(p.x, p.y, active ? 20 : complete ? 15 : 11, 0, Math.PI * 2);
+  ctx.strokeStyle = active || complete ? p.color : "rgba(210, 237, 246, 0.24)";
+  ctx.lineWidth = active ? 2.2 : complete ? 1.4 : 1.0;
   ctx.stroke();
+  if (key === "input") {
+    ctx.fillStyle = "rgba(236, 244, 248, 0.82)";
+    ctx.font = `800 ${Math.max(9, Math.floor(cortex.canvas.width / 130))}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText("PROMPT", p.x, p.y - 17);
+  }
   ctx.restore();
 }
 
@@ -468,13 +507,26 @@ function drawCortex() {
       activeEdge: "#80e0d4",
     },
   };
-  const activeKeys = [cortex.activeTech, cortex.lastTech].filter(Boolean);
+  const completedKeys = cortex.completedTech ? Array.from(cortex.completedTech) : [];
+  const activeKeys = [cortex.activeTech, ...completedKeys.slice(-4)].filter(Boolean);
   drawBrainPieces(ctx, localBrain, cortexPieces.local, activeKeys, time);
   drawBrainPieces(ctx, sharedBrain, cortexPieces.shared, activeKeys, time);
 
-  const activeFlow = cortexFlows[cortex.activeTech] || [];
+  const activeLinkKeys = new Set((cortex.activeLinks || []).map(([from, to]) => linkKey(from, to)));
+  const completeLinkKeys = new Set((cortex.completedLinks || []).map(([from, to]) => linkKey(from, to)));
+  const allLinks = new Map();
   Object.entries(cortexFlows).forEach(([tech, flow]) => {
-    drawConnection(ctx, flow[0], flow[1], cortexNodes[tech]?.color || "#80c7ff", activeFlow[0] === flow[0] && activeFlow[1] === flow[1]);
+    allLinks.set(linkKey(flow[0], flow[1]), { tech, flow });
+  });
+  (cortex.activeLinks || []).forEach((flow) => {
+    allLinks.set(linkKey(flow[0], flow[1]), { tech: flow[1], flow });
+  });
+  (cortex.completedLinks || []).forEach((flow) => {
+    allLinks.set(linkKey(flow[0], flow[1]), { tech: flow[1], flow });
+  });
+  allLinks.forEach(({ tech, flow }, key) => {
+    const state = activeLinkKeys.has(key) ? "active" : completeLinkKeys.has(key) ? "complete" : "idle";
+    drawConnection(ctx, flow[0], flow[1], cortexNodes[tech]?.color || cortexNodes[flow[1]]?.color || "#80c7ff", state);
   });
   Object.keys(cortexNodes).forEach((key) => drawNode(ctx, key));
   drawParticles(ctx);
@@ -577,12 +629,15 @@ function clearAnimation() {
   document.querySelectorAll(".brain-segment,.bridge-segment,.cortex-chip").forEach((item) => {
     item.classList.remove("active", "complete", "error");
   });
-  document.querySelectorAll(".flow-rails path").forEach((item) => item.classList.remove("flowing"));
-  document.querySelectorAll(".pipeline [data-step]").forEach((item) => item.classList.remove("active"));
+  document.querySelectorAll(".flow-rails path").forEach((item) => item.classList.remove("flowing", "complete-flow"));
+  document.querySelectorAll(".pipeline [data-step]").forEach((item) => item.classList.remove("active", "complete"));
   if (cortex) {
     cortex.activeTech = "";
     cortex.activeStage = "";
     cortex.lastTech = "";
+    cortex.activeLinks = [];
+    cortex.completedLinks = [];
+    cortex.completedTech = new Set();
   }
 }
 
@@ -602,13 +657,23 @@ function activateStage(stage, technology, state, message) {
   regions.forEach((region) => {
     region.classList.add(state === "error" ? "error" : state === "complete" ? "complete" : "active");
   });
-  if (flow) flow.classList.add("flowing");
-  if (step) step.classList.add("active");
+  if (flow) flow.classList.add(state === "complete" ? "complete-flow" : "flowing");
+  if (step) {
+    if (state === "complete") step.classList.add("complete");
+    else step.classList.add("active");
+  }
   if (cortex) {
     cortex.activeTech = tech;
     cortex.activeStage = stage;
     cortex.lastTech = tech;
-    if (state === "active") spawnFlow(tech, stage === "reason" ? 11 : 7);
+    const links = stageLinks(stage, tech);
+    cortex.activeLinks = state === "complete" ? [] : links;
+    if (state === "complete") {
+      cortex.completedTech.add(tech);
+      links.forEach((link) => cortex.completedLinks.push(link));
+      cortex.completedLinks = cortex.completedLinks.slice(-10);
+    }
+    if (state === "active") spawnFlow(tech, stage === "reason" ? 12 : 8, stage);
   }
 
   $("cognitiveState").textContent = "COGNITIVE STATE · " + String(stage).toUpperCase();
@@ -656,7 +721,8 @@ function resetRunUi() {
   if (cortex) {
     cortex.activeTech = "strands";
     cortex.activeStage = "input";
-    spawnFlow("strands", 9);
+    cortex.activeLinks = stageLinks("input", "strands");
+    spawnFlow("strands", 9, "input");
   }
 }
 

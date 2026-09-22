@@ -351,6 +351,12 @@ h1 {
   animation: dash 0.85s linear infinite;
 }
 
+.flow-rails path.complete-flow {
+  stroke: rgba(141, 230, 165, 0.72);
+  stroke-width: 3;
+  filter: url(#softGlow);
+}
+
 .brain-segment path,
 .brain-segment circle {
   stroke-width: 3;
@@ -503,6 +509,13 @@ h1 {
   filter: url(#softGlow);
 }
 
+.brain-segment.active text,
+.brain-segment.complete text,
+.bridge-segment.active text,
+.bridge-segment.complete text {
+  text-shadow: 0 0 12px currentColor;
+}
+
 .brain-legend {
   position: absolute;
   left: 14px;
@@ -600,6 +613,11 @@ h1 {
 .pipeline > div.active {
   border-color: var(--blue);
   background: #10253a;
+}
+
+.pipeline > div.complete {
+  border-color: rgba(141, 230, 165, 0.64);
+  background: #0e211b;
 }
 
 .pipeline b {
