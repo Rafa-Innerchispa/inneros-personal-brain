@@ -18,6 +18,97 @@ class PersonalBrain:
     memory: object
     web: object
 
+    @staticmethod
+    def _normalize_route_mode(route_mode: str | None) -> str:
+        normalized = (route_mode or "auto").strip().lower().replace("-", "_").replace(" ", "_")
+        return normalized if normalized in {"auto", "memory_first", "local_only", "web_only"} else "auto"
+
+    @staticmethod
+    def _is_identity_or_memory_query(prompt: str) -> bool:
+        text = f" {prompt.lower()} "
+        markers = (
+            "who am i",
+            "quien soy",
+            "quién soy",
+            "sobre mi",
+            "sobre mí",
+            "mi proyecto",
+            "mis proyectos",
+            "recuerdas",
+            "remember about me",
+            "what do you remember",
+            "que recuerdas",
+            "qué recuerdas",
+            "inneros",
+            "ralphi",
+            "pc doctor",
+            "innerchispa",
+        )
+        return any(marker in text for marker in markers)
+
+    @staticmethod
+    def _needs_live_web(prompt: str) -> bool:
+        text = f" {prompt.lower()} "
+        markers = (
+            "latest",
+            "today",
+            "current",
+            "news",
+            "recent",
+            "buscar",
+            "busca",
+            "internet",
+            "web",
+            "google",
+            "bright data",
+            "brightdata",
+            "ahora",
+            "hoy",
+            "actual",
+            "reciente",
+            "noticias",
+        )
+        return any(marker in text for marker in markers)
+
+    def _plan_route(self, prompt: str, route_mode: str | None) -> dict:
+        mode = self._normalize_route_mode(route_mode)
+        personal = self._is_identity_or_memory_query(prompt)
+        needs_web = self._needs_live_web(prompt)
+        if mode == "local_only":
+            use_memory = False
+            use_web = False
+            policy = "local_only"
+            reason = "Forced local-only route; no external memory or web lookup."
+        elif mode == "web_only":
+            use_memory = False
+            use_web = True
+            policy = "web_only"
+            reason = "Forced live-web route through Bright Data."
+        elif mode == "memory_first":
+            use_memory = True
+            use_web = needs_web and not personal
+            policy = "memory_first"
+            reason = "Memory-first route; Bright Data only when the prompt asks for current public web context."
+        elif personal and not needs_web:
+            use_memory = True
+            use_web = False
+            policy = "identity_memory"
+            reason = "Personal identity/project question: Cognee memory first, no Bright Data by default."
+        else:
+            use_memory = True
+            use_web = needs_web
+            policy = "auto_live_web" if needs_web else "auto_memory"
+            reason = "AUTO routing selected sources from prompt intent."
+        return {
+            "mode": mode,
+            "policy": policy,
+            "reason": reason,
+            "use_memory": use_memory,
+            "use_web": use_web,
+            "personal_query": personal,
+            "live_web_intent": needs_web,
+        }
+
     async def _emit(self, emitter: EventEmitter | None, event: dict) -> None:
         if emitter is None:
             return
@@ -29,37 +120,63 @@ class PersonalBrain:
         self,
         prompt: str,
         act: bool = False,
+        route_mode: str = "auto",
         emit: EventEmitter | None = None,
     ) -> BrainResponse:
-        trace = ["remember:query-memory"]
+        route = self._plan_route(prompt, route_mode)
+        trace = [f"route:{route['policy']}"]
         dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
+        stages_executed: list[str] = ["input"]
+        tool_calls = {
+            "cognee_search": 0,
+            "brightdata_search": 0,
+            "cognee_remember": 0,
+            "docker_action": 0,
+        }
         await self._emit(emit, {
             "stage": "input",
             "technology": "strands",
             "state": "active",
-            "message": "Prompt entered the Strands orchestration path",
+            "message": f"Route selected: {route['policy']} ({route['mode']})",
             "route_class": "LOCAL_OR_DISTRIBUTED",
+            "route_mode": route["mode"],
         })
-        await self._emit(emit, {
-            "stage": "remember",
-            "technology": "cognee",
-            "state": "active",
-            "message": "Recalling persistent memory from Cognee",
-            "dataset": dataset,
-            "source_class": "Cognee shared graph",
-        })
-        memory_hits: list[Evidence] = await self.memory.search(prompt)
-        await self._emit(emit, {
-            "stage": "remember",
-            "technology": "cognee",
-            "state": "complete",
-            "message": f"Recovered {len(memory_hits)} relevant memory items",
-            "count": len(memory_hits),
-            "dataset": dataset,
-            "source_class": "Cognee shared graph",
-        })
+        memory_hits: list[Evidence] = []
+        if route["use_memory"]:
+            trace.append("remember:query-memory")
+            stages_executed.append("remember")
+            await self._emit(emit, {
+                "stage": "remember",
+                "technology": "cognee",
+                "state": "active",
+                "message": "Recalling persistent memory from Cognee",
+                "dataset": dataset,
+                "source_class": "Cognee shared graph",
+            })
+            tool_calls["cognee_search"] += 1
+            memory_hits = await self.memory.search(prompt)
+            await self._emit(emit, {
+                "stage": "remember",
+                "technology": "cognee",
+                "state": "complete",
+                "message": f"Recovered {len(memory_hits)} relevant memory items",
+                "count": len(memory_hits),
+                "dataset": dataset,
+                "source_class": "Cognee shared graph",
+            })
+        else:
+            trace.append("remember:skipped-by-route")
+            await self._emit(emit, {
+                "stage": "remember",
+                "technology": "cognee",
+                "state": "complete",
+                "message": "Cognee recall skipped by selected route",
+                "dataset": dataset,
+                "source_class": "Cognee shared graph",
+            })
 
         trace.append("remember:inject-working-context")
+        stages_executed.append("inject")
         await self._emit(emit, {
             "stage": "inject",
             "technology": "strands",
@@ -77,28 +194,44 @@ class PersonalBrain:
             "dataset": dataset,
         })
 
-        trace.append("discover:query-live-web")
-        await self._emit(emit, {
-            "stage": "observe",
-            "technology": "brightdata",
-            "state": "active",
-            "message": "Searching the live web with Bright Data",
-        })
-        web_hits: list[Evidence] = await self.web.search(prompt)
-        replay = any(bool(x.metadata.get("verified_replay")) for x in web_hits)
-        await self._emit(emit, {
-            "stage": "observe",
-            "technology": "brightdata",
-            "state": "complete",
-            "message": (
-                f"Loaded {len(web_hits)} verified replay results"
-                if replay
-                else f"Found {len(web_hits)} live web results"
-            ),
-            "count": len(web_hits),
-            "mode": "verified-replay" if replay else "live",
-            "source_class": "Bright Data live web" if not replay else "verified replay",
-        })
+        web_hits: list[Evidence] = []
+        replay = False
+        if route["use_web"]:
+            trace.append("discover:query-live-web")
+            stages_executed.append("observe")
+            await self._emit(emit, {
+                "stage": "observe",
+                "technology": "brightdata",
+                "state": "active",
+                "message": "Searching the live web with Bright Data",
+            })
+            tool_calls["brightdata_search"] += 1
+            web_hits = await self.web.search(prompt)
+            replay = any(bool(x.metadata.get("verified_replay")) for x in web_hits)
+            await self._emit(emit, {
+                "stage": "observe",
+                "technology": "brightdata",
+                "state": "complete",
+                "message": (
+                    f"Loaded {len(web_hits)} verified replay results"
+                    if replay
+                    else f"Found {len(web_hits)} live web results"
+                ),
+                "count": len(web_hits),
+                "mode": "verified-replay" if replay else "live",
+                "source_class": "Bright Data live web" if not replay else "verified replay",
+            })
+        else:
+            trace.append("discover:skipped-by-route")
+            await self._emit(emit, {
+                "stage": "observe",
+                "technology": "brightdata",
+                "state": "complete",
+                "message": "Bright Data skipped by route policy",
+                "count": 0,
+                "mode": "not_used",
+                "source_class": "Bright Data live web",
+            })
 
         reason_memory_hits = memory_hits
         if act:
@@ -120,6 +253,7 @@ class PersonalBrain:
             + [f"WEB: {x.summary}" for x in web_hits]
         )
 
+        stages_executed.append("reason")
         await self._emit(emit, {
             "stage": "reason",
             "technology": "strands",
@@ -181,6 +315,7 @@ class PersonalBrain:
 
         actions: list[dict] = []
         if act:
+            stages_executed.append("govern")
             await self._emit(emit, {
                 "stage": "govern",
                 "technology": "govern",
@@ -195,6 +330,7 @@ class PersonalBrain:
                 "decision": "allowed_demo_artifact",
             })
             trace.append("act:docker-sandbox")
+            stages_executed.append("act")
             await self._emit(emit, {
                 "stage": "act",
                 "technology": "docker",
@@ -202,6 +338,7 @@ class PersonalBrain:
                 "message": "Executing a bounded action in Docker Sandbox",
             })
             executor = DockerSandboxExecutor()
+            tool_calls["docker_action"] += 1
             sandbox_result = executor.prepare_artifact(
                 f"User request: {prompt}\n\nReasoned answer:\n{answer}"
             )
@@ -230,6 +367,7 @@ class PersonalBrain:
                 })
 
         trace.append("verify:record-evidence")
+        stages_executed.append("learn")
         await self._emit(emit, {
             "stage": "learn",
             "technology": "cognee",
@@ -241,6 +379,7 @@ class PersonalBrain:
             f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
             {"trace": trace, "actions": actions},
         )
+        tool_calls["cognee_remember"] += 1
         trace.append("remember:store-outcome")
         await self._emit(emit, {
             "stage": "learn",
@@ -250,12 +389,55 @@ class PersonalBrain:
             "dataset": dataset,
         })
 
+        fallback_reason = ""
+        if "[Strands fallback:" in answer:
+            fallback_reason = answer.split("[Strands fallback:", 1)[1].split("]", 1)[0].strip()
+        route_summary = {
+            "route_mode": route["mode"],
+            "route_policy": route["policy"],
+            "orchestrator": "AWS Strands" if not fallback_reason else "deterministic fallback after Strands error",
+            "final_answer_model": os.getenv("LOCAL_LLM_MODEL", "QuantTrio/Qwen3-Coder-30B-A3B-Instruct-AWQ"),
+            "stages_executed": stages_executed,
+            "sources_used": [
+                source
+                for source, used in {
+                    "cognee_shared_memory": bool(memory_hits),
+                    "brightdata_live_web": bool(web_hits),
+                    "docker_sandbox": bool(actions),
+                }.items()
+                if used
+            ],
+            "sources_not_used": [
+                source
+                for source, used in {
+                    "cognee_shared_memory": route["use_memory"],
+                    "brightdata_live_web": route["use_web"],
+                    "docker_sandbox": act,
+                }.items()
+                if not used
+            ],
+            "counts": {
+                "memory_hits": len(memory_hits),
+                "web_hits": len(web_hits),
+                "actions": len(actions),
+            },
+            "tool_calls": tool_calls,
+            "fallback_active": bool(fallback_reason or replay),
+            "fallback_reason": fallback_reason or ("Bright Data verified replay" if replay else ""),
+            "evidence_refs": {
+                "cognee_dataset": dataset,
+                "web_mode": "verified_replay" if replay else "live" if web_hits else "not_used",
+            },
+            "routing_reason": route["reason"],
+        }
+
         return BrainResponse(
             answer=answer,
             memory_hits=memory_hits,
             web_hits=web_hits,
             actions=actions,
             trace=trace,
+            route=route_summary,
         )
 
     async def _reason(self, prompt: str, context: str) -> str:

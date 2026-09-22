@@ -12,6 +12,7 @@ class Evidence(BaseModel):
 class BrainRequest(BaseModel):
     prompt: str
     act: bool = False
+    route_mode: str = "auto"
 
 
 class BrainResponse(BaseModel):
@@ -20,3 +21,4 @@ class BrainResponse(BaseModel):
     web_hits: list[Evidence] = Field(default_factory=list)
     actions: list[dict] = Field(default_factory=list)
     trace: list[str] = Field(default_factory=list)
+    route: dict = Field(default_factory=dict)

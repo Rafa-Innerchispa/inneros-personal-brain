@@ -212,6 +212,10 @@ class BrightDataAdapter:
         )
 
     @staticmethod
+    def _normalize_query(query: str) -> str:
+        return " ".join(query.lower().split())[:500]
+
+    @staticmethod
     def _parse_sse(text: str) -> dict:
         payloads = []
         for line in text.splitlines():
@@ -265,19 +269,28 @@ class BrightDataAdapter:
             )
         return evidence
 
-    def _read_cache(self, limit: int) -> list[Evidence]:
+    def _read_cache(self, query: str, limit: int) -> list[Evidence]:
         try:
             payload = json.loads(self.cache_path.read_text(encoding="utf-8"))
+            if payload.get("query") != self._normalize_query(query):
+                return []
             organic = payload.get("organic") or []
             return self._to_evidence(organic, limit, replay=True)
         except Exception:
             return []
 
-    def _write_cache(self, organic: list[dict]) -> None:
+    def _write_cache(self, query: str, organic: list[dict]) -> None:
         try:
             self.cache_path.parent.mkdir(parents=True, exist_ok=True)
             self.cache_path.write_text(
-                json.dumps({"provider": "brightdata", "organic": organic}, ensure_ascii=False),
+                json.dumps(
+                    {
+                        "provider": "brightdata",
+                        "query": self._normalize_query(query),
+                        "organic": organic,
+                    },
+                    ensure_ascii=False,
+                ),
                 encoding="utf-8",
             )
         except Exception:
@@ -335,9 +348,9 @@ class BrightDataAdapter:
                 response = await client.post(self.rest_endpoint, headers=headers, json=raw_payload)
                 response.raise_for_status()
                 data = response.json()
-            organic = self._extract_rest_organic(data)
+        organic = self._extract_rest_organic(data)
         if organic:
-            self._write_cache(organic)
+            self._write_cache(query, organic)
             return self._to_evidence(organic, limit, replay=False)
         return []
 
@@ -350,7 +363,7 @@ class BrightDataAdapter:
             pass
 
         if not self.token:
-            return self._read_cache(limit)
+            return self._read_cache(query, limit)
 
         params = {"token": self.token}
         headers = {
@@ -409,7 +422,7 @@ class BrightDataAdapter:
 
             result = (rpc.get("result") or {}) if isinstance(rpc, dict) else {}
             if result.get("isError"):
-                return self._read_cache(limit)
+                return self._read_cache(query, limit)
 
             content = result.get("content") or []
             merged = "\n".join(
@@ -420,8 +433,8 @@ class BrightDataAdapter:
             payload = self._extract_search_payload(merged)
             organic = payload.get("organic") or []
             if organic:
-                self._write_cache(organic)
+                self._write_cache(query, organic)
                 return self._to_evidence(organic, limit, replay=False)
-            return self._read_cache(limit)
+            return self._read_cache(query, limit)
         except (httpx.TimeoutException, httpx.HTTPError):
-            return self._read_cache(limit)
+            return self._read_cache(query, limit)

@@ -230,11 +230,27 @@ h1 {
   filter: url(#softGlow);
 }
 
+.local-shell {
+  stroke: url(#localShell);
+}
+
+.shared-shell {
+  stroke: url(#brainShell);
+}
+
 .brain-fold {
   fill: none;
   stroke: rgba(210, 237, 246, 0.18);
   stroke-width: 2;
   stroke-linecap: round;
+}
+
+.brain-title {
+  fill: #d8eef4;
+  font-size: 16px;
+  font-weight: 900;
+  text-anchor: middle;
+  letter-spacing: 0.08em;
 }
 
 .flow-rails path {
@@ -542,7 +558,8 @@ textarea:focus {
 }
 
 .button-row,
-.judge-grid {
+.judge-grid,
+.route-controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
@@ -550,6 +567,7 @@ textarea:focus {
 }
 
 .button-row button,
+.route-controls button,
 .judge-grid button,
 .example-grid button {
   min-height: 38px;
@@ -559,6 +577,24 @@ textarea:focus {
   background: #102132;
   font-size: 12px;
   font-weight: 850;
+}
+
+.route-controls {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.route-controls button {
+  min-height: 34px;
+  padding: 6px 4px;
+  color: #b7ccd7;
+  background: #0a1722;
+  font-size: 10px;
+}
+
+.route-controls button.selected {
+  color: #041111;
+  background: var(--green);
+  border-color: var(--green);
 }
 
 .button-row .primary {
@@ -834,8 +870,8 @@ footer strong {
 
   #brainSvg {
     height: 385px;
-    width: 1180px;
-    transform: translateX(-150px);
+    width: 1280px;
+    transform: translateX(-210px);
   }
 
   .brain-legend {
@@ -850,6 +886,10 @@ footer strong {
   }
 
   .judge-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .route-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

@@ -39,6 +39,7 @@ const stageTech = {
 
 let statuses = {};
 let seq = 0;
+let activeRouteMode = "auto";
 
 function $(id) {
   return document.getElementById(id);
@@ -198,7 +199,14 @@ function resetRunUi() {
 function renderResult(data) {
   const webHits = data.web_hits || [];
   const replay = webHits.some((item) => item.metadata && item.metadata.verified_replay);
-  $("answer").textContent = data.answer || "Completed without textual answer.";
+  const route = data.route || {};
+  const routeLines = [
+    `ROUTE ${String(route.route_mode || activeRouteMode).toUpperCase()} · ${String(route.route_policy || "unknown").toUpperCase()}`,
+    `ORCHESTRATOR ${route.orchestrator || "unknown"} · FINAL MODEL ${route.final_answer_model || "unknown"}`,
+    `USED ${(route.sources_used || []).join(", ") || "none"} · SKIPPED ${(route.sources_not_used || []).join(", ") || "none"}`,
+    route.fallback_active ? `FALLBACK ACTIVE ${route.fallback_reason || ""}` : "FALLBACK inactive"
+  ].join("\n");
+  $("answer").textContent = `${routeLines}\n\n${data.answer || "Completed without textual answer."}`;
   $("metrics").innerHTML = `
     <span>MEM ${(data.memory_hits || []).length}</span>
     <span>WEB ${webHits.length}${replay ? " REPLAY" : " LIVE"}</span>
@@ -217,7 +225,7 @@ async function runBrain(act) {
   $("actBtn").disabled = true;
   resetRunUi();
 
-  const stream = new EventSource(`/api/brain/stream?prompt=${encodeURIComponent(prompt)}&act=${act ? "true" : "false"}`);
+  const stream = new EventSource(`/api/brain/stream?prompt=${encodeURIComponent(prompt)}&act=${act ? "true" : "false"}&route_mode=${encodeURIComponent(activeRouteMode)}`);
   stream.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.type === "stage") {
@@ -279,6 +287,13 @@ async function runProof(mode) {
 
 $("thinkBtn").addEventListener("click", () => runBrain(false));
 $("actBtn").addEventListener("click", () => runBrain(true));
+document.querySelectorAll("[data-route]").forEach((button) => {
+  button.addEventListener("click", () => {
+    activeRouteMode = button.dataset.route || "auto";
+    document.querySelectorAll("[data-route]").forEach((item) => item.classList.toggle("selected", item === button));
+    $("modePill").textContent = "ROUTE " + activeRouteMode.replace("_", " ").toUpperCase();
+  });
+});
 document.querySelectorAll("[data-prompt]").forEach((button) => {
   button.addEventListener("click", () => {
     $("prompt").value = button.dataset.prompt;

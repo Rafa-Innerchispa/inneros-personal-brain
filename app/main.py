@@ -108,13 +108,14 @@ async def run_proof_mode(mode: str) -> dict:
 
 @app.post("/api/brain", response_model=BrainResponse)
 async def ask_brain(request: BrainRequest) -> BrainResponse:
-    return await brain.answer(request.prompt, act=request.act)
+    return await brain.answer(request.prompt, act=request.act, route_mode=request.route_mode)
 
 
 @app.get("/api/brain/stream")
 async def stream_brain(
     prompt: str = Query(..., min_length=1, max_length=1800),
     act: bool = False,
+    route_mode: str = "auto",
 ) -> StreamingResponse:
     async def event_stream():
         queue: asyncio.Queue[dict] = asyncio.Queue()
@@ -124,7 +125,7 @@ async def stream_brain(
 
         async def run() -> None:
             try:
-                result = await brain.answer(prompt, act=act, emit=emit)
+                result = await brain.answer(prompt, act=act, route_mode=route_mode, emit=emit)
                 await queue.put({
                     "type": "result",
                     "answer": result.answer,
@@ -132,6 +133,7 @@ async def stream_brain(
                     "web_hits": [x.model_dump() for x in result.web_hits],
                     "actions": result.actions,
                     "trace": result.trace,
+                    "route": result.route,
                 })
             except Exception as exc:
                 await queue.put({
