@@ -224,6 +224,19 @@ function renderResult(data) {
   const actions = data.actions || [];
   const replay = webHits.some((item) => item.metadata && item.metadata.verified_replay);
   const route = data.route || {};
+  const compact = (value, max = 180) => {
+    const text = String(value || "").replace(/\s+/g, " ").trim();
+    return text.length > max ? text.slice(0, max - 1) + "..." : text;
+  };
+  const memoryEvidence = memoryHits.slice(0, 3).map((item, index) => {
+    return `${index + 1}. ${compact(item.summary, 220)}`;
+  });
+  const webEvidence = webHits.slice(0, 5).map((item, index) => {
+    const meta = item.metadata || {};
+    const title = meta.title || compact(item.summary, 120);
+    const url = meta.url ? ` — ${meta.url}` : "";
+    return `${index + 1}. ${compact(title, 140)}${url}`;
+  });
   const whoAnswered = [
     `STRANDS ROUTER: ${route.routing_reason || "Selected the route and ordered the tools."}`,
     `COGNEE MEMORY: ${memoryHits.length ? `${memoryHits.length} recalled item(s) from ${route.evidence_refs?.cognee_dataset || "dataset"}.` : "not used for this route."}`,
@@ -238,7 +251,12 @@ function renderResult(data) {
     `USED ${(route.sources_used || []).join(", ") || "none"} · SKIPPED ${(route.sources_not_used || []).join(", ") || "none"}`,
     `STAGES ${(route.stages_executed || []).join(" -> ") || "not reported"}`
   ].join("\n");
-  $("answer").textContent = `${whoAnswered}\n\n${routeLines}\n\nFINAL ANSWER\n${data.answer || "Completed without textual answer."}`;
+  const evidenceLines = [
+    "SOURCE EVIDENCE",
+    memoryEvidence.length ? `COGNEE\n${memoryEvidence.join("\n")}` : "COGNEE\nNo memory evidence returned.",
+    webEvidence.length ? `BRIGHT DATA\n${webEvidence.join("\n")}` : "BRIGHT DATA\nNo web evidence returned.",
+  ].join("\n\n");
+  $("answer").textContent = `${whoAnswered}\n\n${routeLines}\n\n${evidenceLines}\n\nFINAL ANSWER\n${data.answer || "Completed without textual answer."}`;
   $("metrics").innerHTML = `
     <span>MEM ${memoryHits.length}</span>
     <span>WEB ${webHits.length}${replay ? " REPLAY" : " LIVE"}</span>
