@@ -1,74 +1,198 @@
 {
   "dataset": "inneros-personal-brain",
-  "seed_version": "2026-09-21-live-cortex-v1",
+  "seed_version": "2026-09-21-curated-v2",
   "facts": [
     {
-      "topic": "InnerOS",
-      "text": "InnerOS is a local-first agentic operating system. It coordinates memory, AI models, external providers, tools, agents and actions while keeping sensitive operational context under owner control."
+      "topic": "Owner identity",
+      "text": "Ralphi is the technical founder and builder behind the InnerChispa, PC Doctor and InnerOS ecosystem. He prefers to work hands-on with AI, infrastructure and automation rather than treat AI as a separate advisory tool."
     },
     {
-      "topic": "Ralphi IA MCP",
-      "text": "Ralphi IA MCP is an optional connectivity layer for InnerOS. It exposes tools and system context to clients such as ChatGPT. The Personal Brain must continue operating when this connector is unavailable."
+      "topic": "Owner working style",
+      "text": "Ralphi prefers direct execution, concrete evidence and finished working systems. For development work, local execution and local models should be prioritized before external agents or cloud models."
     },
     {
-      "topic": "Memory architecture",
-      "text": "InnerOS operational memory uses persistent systems such as MongoDB and Qdrant. For the Battle of the Personal Brains demo, Cognee is the brain's independent persistent structured memory and knowledge graph."
+      "topic": "Owner technical principle",
+      "text": "Ralphi values local-first architecture, data sovereignty, verified execution and graceful operation when cloud providers or external APIs are unavailable."
     },
     {
-      "topic": "Physical Guardian",
-      "text": "InnerOS Physical Guardian is evolving from simple presence detection into a cyber-physical incident engine. Its target incidents include restricted-zone intrusion, loitering, camera failure or sabotage, and doors or access points left open too long."
+      "topic": "Owner product principle",
+      "text": "A visible status in InnerOS should reflect real backend evidence. Interfaces must not claim READY, LIVE or VERIFIED unless the underlying capability has actually been exercised."
     },
     {
-      "topic": "Physical Guardian principle",
-      "text": "Physical Guardian follows a loop of detection, tracking, zones, temporality and context, then human approval, physical action, verification and evidence. It is designed for sovereign local-first deployment."
+      "topic": "Owner continuity principle",
+      "text": "Project continuity should come from canonical repositories, handoff documents and durable coordination records instead of relying on one chat session or one model's transient context."
     },
     {
-      "topic": "VoiceOps",
-      "text": "InnerOS VoiceOps integrates AI calling with existing telephony infrastructure. A working Grandstream UCM-based flow has already placed real outbound calls, received audio, handled DTMF and used Tailscale for private connectivity."
+      "topic": "Owner infrastructure principle",
+      "text": "GitHub and other remotes are useful for collaboration and distribution, but important project state should also exist on owner-controlled local infrastructure so a third-party outage does not erase operational continuity."
     },
     {
-      "topic": "PC Doctor",
-      "text": "PC Doctor is an operational technology and managed-services business serving buildings, homes and organizations. Its roadmap is moving from one-off physical installations toward recurring managed services and AI-enabled operations."
+      "topic": "Ecosystem structure",
+      "text": "InnerChispa packages AI and infrastructure capabilities, PC Doctor provides real operational environments and a commercial channel, and InnerOS is the common agentic platform connecting memory, models, tools, approvals, actions and evidence."
     },
     {
       "topic": "InnerChispa",
-      "text": "InnerChispa focuses on AI agents, APIs, servers and reusable infrastructure. Its technical positioning emphasizes local-first systems and data sovereignty."
+      "text": "InnerChispa develops AI agents, APIs, servers and reusable infrastructure. Its positioning emphasizes local-first systems, practical automation and owner control of data and execution."
     },
     {
-      "topic": "Local compute",
-      "text": "InnerOS uses local AI compute. The AMD server runs vLLM and a Qwen3-Coder 30B-class model, allowing inference to remain local rather than requiring a cloud LLM."
+      "topic": "PC Doctor",
+      "text": "PC Doctor is the real-world technology operations business in the ecosystem, working with buildings, homes and organizations across networking, security, automation and managed technology services."
+    },
+    {
+      "topic": "PC Doctor strategy",
+      "text": "PC Doctor is moving from one-off installation work toward recurring managed services supported by AI, automation, monitoring, documentation and proactive operations."
+    },
+    {
+      "topic": "InnerOS",
+      "text": "InnerOS is a local-first agentic operating layer that coordinates signals, memory, AI models, external providers, tools, agents, approvals, actions, verification and evidence."
+    },
+    {
+      "topic": "InnerOS purpose",
+      "text": "InnerOS exists to reduce the distance between human intent and verified execution while preserving human authority over consequential actions."
+    },
+    {
+      "topic": "InnerOS governance",
+      "text": "Consequential or physical actions should be governed with explicit approval, bounded permissions, verification and evidence rather than being executed solely because a model suggested them."
+    },
+    {
+      "topic": "InnerOS action pattern",
+      "text": "A preferred governed workflow is inspect, propose, explicit approval, single-use execution permission, execute, verify and preserve evidence."
+    },
+    {
+      "topic": "InnerOS truth discipline",
+      "text": "InnerOS distinguishes observation from inference, proposal from approval, execution from verification, and live evidence from replay or fixtures."
+    },
+    {
+      "topic": "Local sovereign fabric",
+      "text": "The InnerOS local sovereign fabric combines local inference, private operational memory, MCP and A2A coordination, local services and owner-controlled infrastructure. It is separate from Cognee but can exchange selected context with it."
+    },
+    {
+      "topic": "Ralphi IA MCP",
+      "text": "Ralphi IA MCP is the optional external nervous system for InnerOS. It exposes tools, coordination and system context to clients such as ChatGPT while the Personal Brain core remains independently operable."
+    },
+    {
+      "topic": "InnerOS private memory",
+      "text": "InnerOS uses private local memory systems such as MongoDB and Qdrant for operational context. This private memory tier should not be automatically copied wholesale into Cognee."
+    },
+    {
+      "topic": "Cognee role",
+      "text": "Cognee is the shared long-term structured memory graph for the Personal Brain. It should contain curated reusable knowledge that multiple agents can safely recall across sessions."
+    },
+    {
+      "topic": "Cognee memory policy",
+      "text": "Cognee shared memory should store durable concepts, project context, decisions, relationships and reusable lessons, while secrets, credentials, sensitive customer records and private operational payloads remain outside semantic shared memory."
+    },
+    {
+      "topic": "Shared agent memory",
+      "text": "Codex, Cursor, Antigravity, Strands and other compatible agents should be able to consume the same curated Cognee dataset so one agent can learn and another can later remember."
+    },
+    {
+      "topic": "Personal Brain",
+      "text": "InnerOS Personal Brain demonstrates a sovereign memory and reasoning fabric where live external information, durable memory, local inference, safe action and agent coordination are visible as one understandable cognitive flow."
+    },
+    {
+      "topic": "Personal Brain demo principle",
+      "text": "The Personal Brain is not a dashboard pretending to think. Every visible cognitive stage should correspond to a real backend event, memory operation, tool call or verified execution."
+    },
+    {
+      "topic": "Personal Brain interaction",
+      "text": "The ideal Personal Brain interface lets the user submit a prompt beside the brain and visually follow how input flows through orchestration, memory, external knowledge, reasoning, action and response."
+    },
+    {
+      "topic": "Personal Brain memory tiers",
+      "text": "The demo should distinguish Cognee shared graph memory from InnerOS private operational memory. Shared memory is portable across agents; private memory stays under local owner control."
     },
     {
       "topic": "Resource Fabric",
-      "text": "External technologies should become reusable platform capabilities rather than one-off product integrations. InnerOS Resource Fabric routes projects to providers such as Bright Data and Cognee."
+      "text": "InnerOS Resource Fabric turns external technologies into reusable platform capabilities instead of one-off integrations, allowing projects to route to providers without hard-wiring the product to a single vendor."
     },
     {
-      "topic": "Cognee integration",
-      "text": "Cognee is registered as a reusable InnerOS provider for persistent structured memory, recall and knowledge-graph capabilities. It is intentionally reusable outside this hackathon."
+      "topic": "Bright Data role",
+      "text": "Bright Data is the Personal Brain's live external perception layer. It brings current public-web evidence into the system and is not itself long-term memory."
     },
     {
-      "topic": "Bright Data integration",
-      "text": "Bright Data gives the Personal Brain live public-web perception. Search results are treated as untrusted external evidence, bounded before reasoning, and can fall back to a clearly labeled verified replay if the live provider times out."
+      "topic": "Bright Data memory flow",
+      "text": "When Bright Data finds useful current information, Strands can use that evidence immediately and selected durable conclusions may later be remembered in Cognee rather than storing raw web noise by default."
     },
     {
       "topic": "AWS Strands integration",
-      "text": "AWS Strands Agents orchestrates the reasoning step of the Personal Brain. In this demo it uses an OpenAI-compatible local vLLM endpoint rather than requiring Bedrock."
+      "text": "AWS Strands Agents is used as the orchestration layer for Personal Brain reasoning and tool routing, while the actual language-model inference can remain local through an OpenAI-compatible vLLM endpoint."
     },
     {
-      "topic": "Docker Sandboxes integration",
-      "text": "Docker Sandboxes provides isolated action execution. The demo has successfully authenticated Docker, enabled KVM and executed a real sandbox action that created a verified artifact."
+      "topic": "Local inference",
+      "text": "InnerOS uses owner-controlled local AI compute with vLLM and Qwen-family models so core reasoning can run locally without requiring a cloud LLM."
     },
     {
-      "topic": "Hackathon",
-      "text": "The Battle of the Personal Brains demo is built around the loop Observe, Remember, Reason, Act, Learn. The sponsor stack maps Bright Data to observation, Cognee to memory, AWS Strands plus local Qwen to reasoning, and Docker Sandboxes to action."
+      "topic": "Docker Sandboxes",
+      "text": "Docker Sandboxes provides isolated execution for bounded actions and demonstrations. The important value is not container branding but the ability to execute and verify actions without contaminating the main host."
     },
     {
-      "topic": "Demo principle",
-      "text": "The Personal Brain is not a dashboard pretending to be intelligent. Every visible cognitive stage should correspond to a real backend event and the UI should distinguish live execution, persistent memory and verified replay."
+      "topic": "Physical Guardian",
+      "text": "InnerOS Physical Guardian adds governed Physical AI to existing cameras, sensors and building infrastructure rather than requiring customers to replace their entire installed security estate."
     },
     {
-      "topic": "Current objective",
-      "text": "The immediate objective is to demonstrate that one sovereign personal brain can remember ongoing projects, discover current external information, reason about what matters, execute a bounded action, verify the result and learn from the outcome."
+      "topic": "Physical Guardian incident engine",
+      "text": "Physical Guardian is evolving from simple presence detection to incident reasoning using detection, tracking, zones, time and context before escalation or governed action."
+    },
+    {
+      "topic": "Physical Guardian target incidents",
+      "text": "Representative Physical Guardian incidents include restricted-zone intrusion, loitering, camera failure or sabotage, after-hours activity and access points left open too long."
+    },
+    {
+      "topic": "Physical Guardian safety",
+      "text": "Physical Guardian separates perception from authority: detection alone does not authorize a physical action. Human review, policy, bounded execution, verification and evidence remain part of the control chain."
+    },
+    {
+      "topic": "VoiceOps",
+      "text": "InnerOS VoiceOps connects AI voice interactions with existing telephony infrastructure and local reasoning so real telephone workflows can be inspected, proposed, approved, executed and verified."
+    },
+    {
+      "topic": "VoiceOps proven capability",
+      "text": "VoiceOps has demonstrated real outbound calling through existing Grandstream-based infrastructure with audio, DTMF and private connectivity while preserving the existing telephony path."
+    },
+    {
+      "topic": "Existing infrastructure strategy",
+      "text": "A recurring InnerOS product strategy is to add intelligence, memory and governed automation on top of infrastructure organizations already own rather than forcing unnecessary replacement."
+    },
+    {
+      "topic": "Human control",
+      "text": "InnerOS is designed so AI can inspect context, recommend actions and prepare execution, but human authority remains explicit when actions are consequential, physical or operationally risky."
+    },
+    {
+      "topic": "Evidence",
+      "text": "Verification and evidence are first-class outputs in InnerOS. A successful action should leave enough evidence to understand what was requested, what was authorized, what executed and what result was observed."
+    },
+    {
+      "topic": "Agent coordination",
+      "text": "InnerOS uses multiple agents and execution surfaces, but they should coordinate through durable shared state, canonical task records and explicit ownership rather than editing the same work blindly."
+    },
+    {
+      "topic": "Development discipline",
+      "text": "Working components should be preserved. New integrations should be isolated, tested and merged only after evidence shows they do not regress already proven paths."
+    },
+    {
+      "topic": "Provider independence",
+      "text": "External providers may supply specialized capabilities, but InnerOS should avoid making the core product dependent on any one provider when a local or interchangeable path is practical."
+    },
+    {
+      "topic": "Regional perspective",
+      "text": "The ecosystem is built with Ecuador and Latin America in mind, where mixed generations of installed infrastructure, cost constraints and resilient local operation make retrofit intelligence and data sovereignty especially valuable."
+    },
+    {
+      "topic": "Business direction",
+      "text": "The ecosystem's commercial direction is to turn proven operational technology and AI capabilities into repeatable products and recurring managed services rather than relying only on custom one-off projects."
+    },
+    {
+      "topic": "Current Personal Brain objective",
+      "text": "The current Personal Brain objective is to prove one reusable brain can observe current information, remember durable context, reason locally, coordinate multiple agents, execute bounded actions and learn without surrendering control of the owner's core data."
+    },
+    {
+      "topic": "Demo story",
+      "text": "The Personal Brain demo story is Observe, Remember, Reason, Act, Learn. Bright Data provides observation, Cognee shared memory, Strands orchestration, local Qwen reasoning, Docker safe action and InnerOS local coordination."
+    },
+    {
+      "topic": "Cross-agent proof",
+      "text": "The strongest shared-memory proof is simple: Agent A learns a harmless fact through Cognee and Agent B later recalls the same fact from the shared dataset without receiving it directly."
     }
   ]
 }
