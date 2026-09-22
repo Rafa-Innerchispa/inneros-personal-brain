@@ -663,6 +663,8 @@ function resetRunUi() {
 function renderResult(data) {
   const webHits = data.web_hits || [];
   const memoryHits = data.memory_hits || [];
+  const availableMemoryHits = memoryHits.filter((item) => !(item.metadata || {}).unavailable);
+  const unavailableMemory = memoryHits.some((item) => (item.metadata || {}).unavailable);
   const actions = data.actions || [];
   const replay = webHits.some((item) => item.metadata && item.metadata.verified_replay);
   const route = data.route || {};
@@ -670,7 +672,7 @@ function renderResult(data) {
     const text = String(value || "").replace(/\s+/g, " ").trim();
     return text.length > max ? text.slice(0, max - 1) + "..." : text;
   };
-  const memoryEvidence = memoryHits.slice(0, 3).map((item, index) => {
+  const memoryEvidence = availableMemoryHits.slice(0, 3).map((item, index) => {
     return `${index + 1}. ${compact(item.summary, 220)}`;
   });
   const webEvidence = webHits.slice(0, 5).map((item, index) => {
@@ -679,14 +681,26 @@ function renderResult(data) {
     const url = meta.url ? ` — ${meta.url}` : "";
     return `${index + 1}. ${compact(title, 140)}${url}`;
   });
+  const action = actions[actions.length - 1] || null;
+  const actionLine = action
+    ? `Docker Sandbox: ${action.status || "unknown"}${action.artifact ? ` · ${action.artifact}` : ""}`
+    : "Docker Sandbox: not requested. Use Think + Act to create a bounded sandbox artifact/proof.";
+  const degraded = route.degraded_sources || [];
+  const healthLines = degraded.length
+    ? degraded.map((item) => `- ${item.source}: ${item.message || item.reason}`).join("\n")
+    : "- No degraded providers reported.";
+  const modelLine = route.fallback_active
+    ? `Qwen / Strands: degraded (${route.fallback_reason}); deterministic evidence summary used.`
+    : `Qwen / vLLM: ${route.final_answer_model || "local model"} synthesized the final answer.`;
   const whoAnswered = [
-    `STRANDS ROUTER: ${route.routing_reason || "Selected the route and ordered the tools."}`,
-    `COGNEE MEMORY: ${memoryHits.length ? `${memoryHits.length} recalled item(s) from ${route.evidence_refs?.cognee_dataset || "dataset"}.` : "not used for this route."}`,
-    `BRIGHT DATA: ${webHits.length ? `${webHits.length} ${replay ? "verified replay" : "live"} result(s).` : "not used for this route."}`,
-    `RALPHI IA / INNEROS: local sovereign fabric is the runtime and coordination layer for this demo.`,
-    `QWEN / VLLM: ${route.final_answer_model || "local model"} synthesized the final answer.`,
-    `DOCKER: ${actions.length ? `${actions.length} action(s), latest ${actions[actions.length - 1]?.status || "unknown"}.` : "no action requested."}`,
-    route.fallback_active ? `FALLBACK: ACTIVE ${route.fallback_reason || ""}` : "FALLBACK: inactive"
+    `Route: ${String(route.route_policy || "unknown").toUpperCase()} · ${route.routing_reason || "Selected route."}`,
+    `Strands Router: selected tools and ordered the flow.`,
+    unavailableMemory
+      ? `Cognee Memory: temporarily unavailable for recall; the run continued.`
+      : `Cognee Memory: ${availableMemoryHits.length ? `${availableMemoryHits.length} recalled item(s) from ${route.evidence_refs?.cognee_dataset || "dataset"}.` : "not used or no matching memory."}`,
+    `Bright Data: ${webHits.length ? `${webHits.length} ${replay ? "verified replay" : "live"} result(s).` : "not used or no public results."}`,
+    modelLine,
+    actionLine,
   ].join("\n");
   const routeLines = [
     `ROUTE ${String(route.route_mode || activeRouteMode).toUpperCase()} · ${String(route.route_policy || "unknown").toUpperCase()}`,
@@ -695,17 +709,23 @@ function renderResult(data) {
   ].join("\n");
   const evidenceLines = [
     "SOURCE EVIDENCE",
-    memoryEvidence.length ? `COGNEE\n${memoryEvidence.join("\n")}` : "COGNEE\nNo memory evidence returned.",
+    memoryEvidence.length ? `COGNEE\n${memoryEvidence.join("\n")}` : `COGNEE\n${unavailableMemory ? "Temporarily unavailable for this run." : "No memory evidence returned."}`,
     webEvidence.length ? `BRIGHT DATA\n${webEvidence.join("\n")}` : "BRIGHT DATA\nNo web evidence returned.",
   ].join("\n\n");
-  $("answer").textContent = `${whoAnswered}\n\n${routeLines}\n\n${evidenceLines}\n\nFINAL ANSWER\n${data.answer || "Completed without textual answer."}`;
+  const finalAnswer = String(data.answer || "Completed without textual answer.")
+    .replace(/\n?\[Strands fallback:[^\]]+\]\s*$/g, "")
+    .trim();
+  const actionSection = action
+    ? `\n\nACTION RESULT\n${actionLine}${action.stderr ? `\nDetail: ${compact(action.stderr, 260)}` : ""}`
+    : "";
+  $("answer").textContent = `RUN SUMMARY\n${whoAnswered}\n\nDEGRADED PROVIDERS\n${healthLines}\n\n${routeLines}\n\n${evidenceLines}\n\nFINAL ANSWER\n${finalAnswer}${actionSection}`;
   $("metrics").innerHTML = `
-    <span>MEM ${memoryHits.length}</span>
+    <span>MEM ${availableMemoryHits.length}${unavailableMemory ? " DEGRADED" : ""}</span>
     <span>WEB ${webHits.length}${replay ? " REPLAY" : " LIVE"}</span>
     <span>ACTIONS ${actions.length}</span>
   `;
-  $("evidenceSummary").textContent = replay
-    ? "Bright Data fallback is clearly labeled as verified replay."
+  $("evidenceSummary").textContent = degraded.length
+    ? "Trace completed with provider degradations clearly labeled."
     : "Trace completed with live backend evidence.";
 }
 

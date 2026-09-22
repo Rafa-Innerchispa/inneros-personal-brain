@@ -230,12 +230,21 @@ class PersonalBrain:
             })
             tool_calls["cognee_search"] += 1
             memory_hits = await self.memory.search(prompt)
+            available_memory_hits = [
+                hit for hit in memory_hits
+                if not bool(hit.metadata.get("unavailable"))
+            ]
+            memory_unavailable = bool(memory_hits) and not available_memory_hits
             await self._emit(emit, {
                 "stage": "remember",
                 "technology": "cognee",
-                "state": "complete",
-                "message": f"Recovered {len(memory_hits)} relevant memory items",
-                "count": len(memory_hits),
+                "state": "error" if memory_unavailable else "complete",
+                "message": (
+                    "Cognee recall temporarily unavailable; continuing with other live sources"
+                    if memory_unavailable
+                    else f"Recovered {len(available_memory_hits)} relevant memory items"
+                ),
+                "count": len(available_memory_hits),
                 "dataset": dataset,
                 "source_class": "Cognee shared graph",
             })
@@ -249,6 +258,11 @@ class PersonalBrain:
                 "dataset": dataset,
                 "source_class": "Cognee shared graph",
             })
+        available_memory_hits = [
+            hit for hit in memory_hits
+            if not bool(hit.metadata.get("unavailable"))
+        ]
+        memory_unavailable = bool(memory_hits) and not available_memory_hits
 
         trace.append("remember:inject-working-context")
         stages_executed.append("inject")
@@ -361,7 +375,8 @@ class PersonalBrain:
         reason_memory_hits = [
             x
             for x in memory_hits
-            if not any(term in x.summary.lower() for term in historical_failure_terms)
+            if not x.metadata.get("unavailable")
+            and not any(term in x.summary.lower() for term in historical_failure_terms)
         ]
 
         context = "\n".join(
@@ -518,6 +533,25 @@ class PersonalBrain:
         fallback_reason = ""
         if "[Strands fallback:" in answer:
             fallback_reason = answer.split("[Strands fallback:", 1)[1].split("]", 1)[0].strip()
+        degraded_sources = []
+        if memory_unavailable:
+            degraded_sources.append({
+                "source": "cognee",
+                "reason": "recall_unavailable",
+                "message": "Cognee recall was unavailable for this run.",
+            })
+        if replay:
+            degraded_sources.append({
+                "source": "brightdata",
+                "reason": "verified_replay",
+                "message": "Bright Data used verified replay because the live provider was unavailable in this run.",
+            })
+        if fallback_reason:
+            degraded_sources.append({
+                "source": "strands_or_local_model",
+                "reason": fallback_reason,
+                "message": "The model/orchestration route degraded, so a deterministic evidence summary was used.",
+            })
         route_summary = {
             "route_mode": route["mode"],
             "route_policy": route["policy"],
@@ -529,7 +563,7 @@ class PersonalBrain:
                 for source, used in {
                     "strands_orchestrator": True,
                     "local_qwen_vllm": True,
-                    "cognee_shared_memory": bool(memory_hits),
+                    "cognee_shared_memory": bool(available_memory_hits),
                     "brightdata_live_web": bool(web_hits),
                     "docker_sandbox": bool(actions),
                 }.items()
@@ -545,13 +579,14 @@ class PersonalBrain:
                 if not used
             ],
             "counts": {
-                "memory_hits": len(memory_hits),
+                "memory_hits": len(available_memory_hits),
                 "web_hits": len(web_hits),
                 "actions": len(actions),
             },
             "tool_calls": tool_calls,
-            "fallback_active": bool(fallback_reason or replay),
-            "fallback_reason": fallback_reason or ("Bright Data verified replay" if replay else ""),
+            "fallback_active": bool(fallback_reason),
+            "fallback_reason": fallback_reason,
+            "degraded_sources": degraded_sources,
             "evidence_refs": {
                 "cognee_dataset": dataset,
                 "brightdata_query": route["web_query"] if route["use_web"] else "",
@@ -642,9 +677,20 @@ class PersonalBrain:
             return str(result), usage
         except Exception as exc:
             if context:
+                evidence_lines = [
+                    line.strip()
+                    for line in context.splitlines()
+                    if line.strip()
+                    and "temporarily unavailable" not in line.lower()
+                    and "no high-confidence public organic" not in line.lower()
+                ][:5]
+                bullets = "\n".join(f"- {line[:260]}" for line in evidence_lines)
                 return (
-                    "I combined available personal memory and live context. "
-                    f"For this request, the strongest evidence I found was:\n{context[:1800]}\n\n"
+                    "I used the available evidence and produced a deterministic summary because "
+                    "the model/orchestration route was temporarily unavailable.\n\n"
+                    f"Evidence used:\n{bullets or '- No reliable evidence lines were available.'}\n\n"
+                    "Next step: verify the listed sources and use Think + Act only when you want "
+                    "a sandbox artifact/proof generated from this reasoning.\n\n"
                     f"[Strands fallback: {type(exc).__name__}]"
                 )
             return (
