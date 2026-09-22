@@ -37,6 +37,15 @@ Then point to the **Shared Memory Fabric** matrix:
 - Gmail is shown as OAuth-gated when credentials are not configured, which is the
   correct secure state.
 
+For local agent clients, start the Cognee MCP bridge:
+
+```bash
+python app/cognee_mcp_proxy.py
+```
+
+It serves `remember`, `recall`, and `forget` at
+`http://127.0.0.1:8241/mcp` using server-side Cognee environment variables.
+
 ## 3. Prove live-world awareness
 
 Use the existing Bright Data MCP/provider to run a live public-web query.
