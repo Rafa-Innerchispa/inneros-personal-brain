@@ -176,13 +176,16 @@ class CogneeCloudMemoryAdapter:
             ("run_in_background", (None, "true")),
             ("node_set", (None, "personal-brain-demo")),
         ]
-        async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(
-                f"{self.base}/api/v1/remember",
-                headers=self._headers(),
-                files=files,
-            )
-            response.raise_for_status()
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.post(
+                    f"{self.base}/api/v1/remember",
+                    headers=self._headers(),
+                    files=files,
+                )
+                response.raise_for_status()
+        except (httpx.HTTPError, ValueError):
+            return
 
 
 class CogneeMemoryAdapter:
