@@ -36,6 +36,19 @@ def sponsor_status() -> dict:
             "label": "Cognee structured memory",
             "core_dependency": True,
         },
+        "cognee_agent_memory": {
+            "state": "ready"
+            if (
+                os.getenv("COGNEE_API_KEY")
+                and os.getenv("COGNEE_SERVICE_URL")
+                and _importable("strands")
+            )
+            else "dependency_pending",
+            "label": "Cognee direct Strands agent memory",
+            "core_dependency": True,
+            "transport": "direct_cloud_http_tools",
+            "dataset": os.getenv("COGNEE_DATASET", "inneros-personal-brain"),
+        },
         "brightdata": {
             "state": "ready"
             if os.getenv("BRIGHTDATA_API_TOKEN")
@@ -60,6 +73,10 @@ def sponsor_status() -> dict:
         },
         "connectors": {
             "mcp_reachable": mcp_reachable,
+            "cognee_direct_agent_memory": bool(
+                os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL")
+            ),
+            "cognee_mcp_surface": "registered_platform_capability",
             "github": "via_mcp" if mcp_reachable else "bridge_optional",
             "gmail": "via_mcp" if mcp_reachable else "bridge_optional",
             "calendar": "via_mcp" if mcp_reachable else "bridge_optional",
