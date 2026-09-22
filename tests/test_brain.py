@@ -88,7 +88,8 @@ def test_live_cortex_explains_shared_agent_memory():
 
 
 def test_memory_fabric_centers_cognee_and_brightdata(monkeypatch):
-    monkeypatch.setenv("COGNEE_SERVICE_URL", "https://example.cognee.test")
+    monkeypatch.delenv("COGNEE_SERVICE_URL", raising=False)
+    monkeypatch.delenv("COGNEE_LIVE_VERIFIED", raising=False)
     monkeypatch.setenv("COGNEE_API_KEY", "secret-value")
     monkeypatch.setenv("BRIGHTDATA_API_TOKEN", "secret-value")
     monkeypatch.delenv("GMAIL_OAUTH_CLIENT_FILE", raising=False)
@@ -101,7 +102,7 @@ def test_memory_fabric_centers_cognee_and_brightdata(monkeypatch):
     assert fabric["dataset"] == "inneros-personal-brain"
     assert fabric["security"]["secrets_in_frontend"] is False
     assert fabric["security"]["ralphi_required_for_core_memory"] is False
-    assert surfaces["personal_brain"]["state"] == "ready"
+    assert surfaces["personal_brain"]["state"] == "configured"
     assert surfaces["strands"]["transport"] == "direct Cognee agent tools"
     assert surfaces["brightdata"]["state"] == "ready"
     assert surfaces["ralphi"]["required_for_core"] is False

@@ -69,7 +69,8 @@ def _tcp_open(host: str, port: int, timeout: float = 0.35) -> bool:
 
 def build_memory_fabric() -> MemoryFabric:
     dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
-    cognee_cloud_ready = bool(os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL"))
+    cognee_cloud_configured = bool(os.getenv("COGNEE_API_KEY"))
+    cognee_cloud_ready = cognee_cloud_configured and os.getenv("COGNEE_LIVE_VERIFIED") == "1"
     cognee_mcp_ready = _tcp_open("127.0.0.1", int(os.getenv("COGNEE_MCP_PORT", "8241")))
     ralphi_ready = _tcp_open("127.0.0.1", int(os.getenv("INNEROS_MCP_PORT", "8102")))
     brightdata_ready = bool(os.getenv("BRIGHTDATA_API_TOKEN"))
@@ -84,16 +85,16 @@ def build_memory_fabric() -> MemoryFabric:
                 label="Personal Brain product",
                 transport="Cognee Cloud HTTP",
                 role="Recall before reasoning and remember verified outcomes",
-                state="ready" if cognee_cloud_ready else "pending_auth",
+                state="ready" if cognee_cloud_ready else "configured" if cognee_cloud_configured else "pending_auth",
                 required_for_core=True,
-                evidence="COGNEE_SERVICE_URL + COGNEE_API_KEY are server-side only",
+                evidence="COGNEE_API_KEY is server-side only; default cloud URL is https://api.cognee.ai",
             ),
             FabricSurface(
                 key="strands",
                 label="AWS Strands",
                 transport="direct Cognee agent tools",
                 role="Agent-native recall and durable remember",
-                state="ready" if cognee_cloud_ready else "pending_auth",
+                state="ready" if cognee_cloud_ready else "configured" if cognee_cloud_configured else "pending_auth",
                 required_for_core=True,
                 evidence="cognee_recall and cognee_remember use the shared dataset",
             ),

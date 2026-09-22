@@ -17,7 +17,7 @@ class CogneeAgentMemoryTools:
     sessions and is shared with other Cognee clients/plugins.
     """
 
-    base_url: str = field(default_factory=lambda: os.getenv("COGNEE_SERVICE_URL", "").rstrip("/"))
+    base_url: str = field(default_factory=lambda: os.getenv("COGNEE_SERVICE_URL", "https://api.cognee.ai").rstrip("/"))
     api_key: str = field(default_factory=lambda: os.getenv("COGNEE_API_KEY", ""))
     dataset: str = field(default_factory=lambda: os.getenv("COGNEE_DATASET", "inneros-personal-brain"))
     recall_calls: int = 0
@@ -51,11 +51,11 @@ class CogneeAgentMemoryTools:
             """
             tracker.recall_calls += 1
             payload = {
-                "searchType": None,
+                "search_type": None,
                 "datasets": [tracker.dataset],
                 "query": query_text[:1200],
-                "topK": 8,
-                "onlyContext": True,
+                "top_k": 8,
+                "only_context": True,
                 "verbose": True,
             }
             with httpx.Client(timeout=45, follow_redirects=True) as client:
@@ -64,6 +64,20 @@ class CogneeAgentMemoryTools:
                     headers=tracker._headers(),
                     json=payload,
                 )
+                if response.status_code == 422:
+                    legacy_payload = {
+                        "searchType": None,
+                        "datasets": [tracker.dataset],
+                        "query": query_text[:1200],
+                        "topK": 8,
+                        "onlyContext": True,
+                        "verbose": True,
+                    }
+                    response = client.post(
+                        tracker.base_url + "/api/v1/recall",
+                        headers=tracker._headers(),
+                        json=legacy_payload,
+                    )
                 response.raise_for_status()
                 rows = response.json()
             if not isinstance(rows, list):

@@ -33,16 +33,21 @@ def sponsor_status() -> dict:
         },
         "cognee": {
             "state": "ready"
-            if os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL")
-            else "platform_ready_secret_pending",
+            if os.getenv("COGNEE_LIVE_VERIFIED") == "1"
+            else "configured" if os.getenv("COGNEE_API_KEY") else "platform_ready_secret_pending",
             "label": "Cognee structured memory",
             "core_dependency": True,
         },
         "cognee_agent_memory": {
             "state": "ready"
             if (
+                os.getenv("COGNEE_LIVE_VERIFIED") == "1"
+                and os.getenv("COGNEE_API_KEY")
+                and _importable("strands")
+            )
+            else "configured"
+            if (
                 os.getenv("COGNEE_API_KEY")
-                and os.getenv("COGNEE_SERVICE_URL")
                 and _importable("strands")
             )
             else "dependency_pending",
@@ -76,7 +81,7 @@ def sponsor_status() -> dict:
         "connectors": {
             "mcp_reachable": mcp_reachable,
             "cognee_direct_agent_memory": bool(
-                os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL")
+                os.getenv("COGNEE_API_KEY")
             ),
             "cognee_mcp_surface": "registered_platform_capability",
             "github": "via_mcp" if mcp_reachable else "bridge_optional",

@@ -90,7 +90,7 @@ class CogneeCloudMemoryAdapter:
     """Live Cognee Cloud memory through the tenant's documented HTTP contract."""
 
     def __init__(self) -> None:
-        self.base = os.getenv("COGNEE_SERVICE_URL", "").rstrip("/")
+        self.base = os.getenv("COGNEE_SERVICE_URL", "https://api.cognee.ai").rstrip("/")
         self.key = os.getenv("COGNEE_API_KEY", "")
         self.dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
 
@@ -101,11 +101,11 @@ class CogneeCloudMemoryAdapter:
         if not self.base or not self.key:
             return []
         payload = {
-            "searchType": None,
+            "search_type": None,
             "datasets": [self.dataset],
             "query": query,
-            "topK": max(1, min(limit, 20)),
-            "onlyContext": True,
+            "top_k": max(1, min(limit, 20)),
+            "only_context": True,
             "verbose": True,
         }
         async with httpx.AsyncClient(timeout=60) as client:
@@ -114,6 +114,20 @@ class CogneeCloudMemoryAdapter:
                 headers=self._headers(),
                 json=payload,
             )
+            if response.status_code == 422:
+                legacy_payload = {
+                    "searchType": None,
+                    "datasets": [self.dataset],
+                    "query": query,
+                    "topK": max(1, min(limit, 20)),
+                    "onlyContext": True,
+                    "verbose": True,
+                }
+                response = await client.post(
+                    f"{self.base}/api/v1/recall",
+                    headers=self._headers(),
+                    json=legacy_payload,
+                )
             response.raise_for_status()
             rows = response.json()
         if not isinstance(rows, list):
