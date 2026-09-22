@@ -45,7 +45,6 @@ let stageTimer = null;
 let cortex = null;
 let attachedContext = "";
 let lastSpokenText = "";
-let voiceReplyEnabled = true;
 let recognition = null;
 
 const cortexNodes = {
@@ -82,7 +81,7 @@ function stageLinks(stage, tech) {
   else if (stage === "audit") links.push(["strands", "cognee"]);
   else if (stage === "govern") links.push(["strands", "govern"]);
   else if (stage === "act") links.push(["govern", "docker"]);
-  else if (stage === "learn") links.push(["strands", "cognee"], ["cognee", "bridge"]);
+  else if (stage === "learn") links.push(["strands", "cognee"]);
   else if (cortexFlows[target]) links.push(cortexFlows[target]);
   return links.filter(([from, to]) => cortexNodes[from] && cortexNodes[to]);
 }
@@ -174,19 +173,11 @@ function updateAttachmentSummary(text) {
 }
 
 function answerSpeechText(data) {
-  const route = data.route || {};
-  const finalAnswer = String(data.answer || "")
+  return String(data.answer || "")
     .replace(/\n?\[Strands fallback:[^\]]+\]\s*$/g, "")
     .replace(/\s+/g, " ")
-    .trim();
-  const sources = [
-    "Respuesta de InnerOS Personal Brain.",
-    `Ruta ${String(route.route_policy || "auto").replaceAll("_", " ")}.`,
-    `Cognee ${((data.memory_hits || []).filter((item) => !(item.metadata || {}).unavailable)).length} memorias.`,
-    `Bright Data ${(data.web_hits || []).length} resultados.`,
-    route.fallback_active ? "La ruta reporto degradacion." : "Sin degradacion reportada.",
-  ].join(" ");
-  return `${sources} ${finalAnswer}`.slice(0, 1800);
+    .trim()
+    .slice(0, 1800);
 }
 
 function setTheme(mode) {
@@ -213,6 +204,10 @@ function speakText(text) {
   utterance.lang = navigator.language || "es-US";
   utterance.rate = 0.98;
   utterance.pitch = 1.02;
+  utterance.onend = () => {
+    $("speakBtn").textContent = "Play Reply";
+    $("speakBtn").classList.remove("selected");
+  };
   window.speechSynthesis.speak(utterance);
 }
 
@@ -245,16 +240,15 @@ function setupVoiceInput() {
     return;
   }
   recognition = new SpeechRecognition();
-  recognition.lang = navigator.language || "es-US";
   recognition.continuous = false;
   recognition.interimResults = false;
   recognition.onstart = () => {
     $("micBtn").classList.add("selected");
-    $("micBtn").textContent = "Listening...";
+    $("micBtn").textContent = "Recording...";
   };
   recognition.onend = () => {
     $("micBtn").classList.remove("selected");
-    $("micBtn").textContent = "Voice In";
+    $("micBtn").textContent = "Record Voice";
   };
   recognition.onerror = (event) => {
     addEvent("Voice", "error", event.error || "Speech recognition error");
@@ -589,10 +583,10 @@ function drawCortex() {
 
   const drift = h > 430 ? Math.sin(time * 0.75) * 2.5 : 0;
   const localBrain = {
-    cx: w * 0.30,
+    cx: w * 0.255,
     cy: h * 0.51 + drift,
-    rx: w * 0.245,
-    ry: h * 0.35,
+    rx: w * 0.225,
+    ry: h * 0.335,
     title: "INNEROS LOCAL BRAIN",
     palette: {
       inner: lightMode ? "rgba(255, 220, 130, 0.46)" : "rgba(235, 207, 139, 0.28)",
@@ -603,10 +597,10 @@ function drawCortex() {
     },
   };
   const sharedBrain = {
-    cx: w * 0.725,
+    cx: w * 0.735,
     cy: h * 0.50 - drift,
-    rx: w * 0.245,
-    ry: h * 0.35,
+    rx: w * 0.235,
+    ry: h * 0.34,
     title: "COGNEE SHARED MEMORY",
     palette: {
       inner: lightMode ? "rgba(104, 216, 204, 0.48)" : "rgba(128, 219, 207, 0.26)",
@@ -643,7 +637,9 @@ function drawCortex() {
     visibleNodes.add(from);
     visibleNodes.add(to);
   });
-  visibleNodes.forEach((key) => drawNode(ctx, key));
+  visibleNodes.forEach((key) => {
+    if (key !== "bridge") drawNode(ctx, key);
+  });
   drawParticles(ctx);
 
   if (w > 620) {
@@ -909,7 +905,29 @@ function renderResult(data) {
     ? "Trace completed with provider degradations clearly labeled."
     : "Trace completed with live backend evidence.";
   lastSpokenText = answerSpeechText(data);
-  if (voiceReplyEnabled) speakText(lastSpokenText);
+}
+
+async function runBrainPost(prompt, act) {
+  addEvent("Backend", "active", "Processing full prompt with attached context");
+  $("answer").textContent = "Processing attached context...";
+  try {
+    const response = await fetch("/api/brain", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt, act, route_mode: activeRouteMode }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const data = await response.json();
+    renderResult(data);
+    addEvent("Backend", "complete", "Response completed through POST route");
+    loadStatus();
+  } catch (error) {
+    addEvent("Backend", "error", error.message || "POST request failed");
+    $("answer").textContent = `ERROR: ${error.message || "POST request failed"}`;
+  } finally {
+    $("thinkBtn").disabled = false;
+    $("actBtn").disabled = false;
+  }
 }
 
 async function runBrain(act) {
@@ -922,6 +940,11 @@ async function runBrain(act) {
   $("thinkBtn").disabled = true;
   $("actBtn").disabled = true;
   resetRunUi();
+
+  if (attachedContext || prompt.length > 1500) {
+    await runBrainPost(prompt, act);
+    return;
+  }
 
   const stream = new EventSource(`/api/brain/stream?prompt=${encodeURIComponent(prompt)}&act=${act ? "true" : "false"}&route_mode=${encodeURIComponent(activeRouteMode)}`);
   stream.onmessage = (event) => {
@@ -955,11 +978,20 @@ $("micBtn").addEventListener("click", () => {
   if (recognition) recognition.start();
 });
 $("speakBtn").addEventListener("click", () => {
-  voiceReplyEnabled = !voiceReplyEnabled;
-  $("speakBtn").classList.toggle("selected", voiceReplyEnabled);
-  $("speakBtn").textContent = voiceReplyEnabled ? "Voice Reply On" : "Voice Reply Off";
-  if (voiceReplyEnabled && lastSpokenText) speakText(lastSpokenText);
-  if (!voiceReplyEnabled && "speechSynthesis" in window) window.speechSynthesis.cancel();
+  if (!("speechSynthesis" in window)) return;
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    $("speakBtn").textContent = "Play Reply";
+    $("speakBtn").classList.remove("selected");
+    return;
+  }
+  if (lastSpokenText) {
+    $("speakBtn").textContent = "Stop Voice";
+    $("speakBtn").classList.add("selected");
+    speakText(lastSpokenText);
+  } else {
+    addEvent("Voice", "active", "No agent response to play yet");
+  }
 });
 $("fileInput").addEventListener("change", (event) => {
   readAttachedFiles(event.target.files).catch((error) => {
