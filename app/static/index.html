@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#071018" />
   <title>InnerOS Personal Brain - Cognee Shared Memory</title>
-  <link rel="stylesheet" href="/static/style.css?v=cortex-20260922d" />
+  <link rel="stylesheet" href="/static/style.css?v=cortex-20260922e" />
 </head>
 <body>
   <main class="app-shell">
@@ -145,10 +145,6 @@
               <text x="1119" y="332">PUBLIC WEB</text>
               <path d="M1044 327 C1000 327 971 316 950 290" />
 
-              <rect x="989" y="434" width="186" height="46" rx="8" />
-              <text x="1082" y="462">CODEX · CURSOR · AG</text>
-              <path d="M989 456 C943 449 909 431 883 397" />
-
               <rect x="32" y="520" width="172" height="46" rx="8" />
               <text x="118" y="548">LOCAL SERVERS</text>
               <path d="M204 542 C281 558 379 544 456 504" />
@@ -163,14 +159,6 @@
             <span class="legend-action">Govern + Docker</span>
           </div>
 
-          <div class="agents-strip" aria-label="Shared agent surfaces">
-            <span>CODEX</span>
-            <span>CURSOR</span>
-            <span>ANTIGRAVITY</span>
-            <span>STRANDS</span>
-            <span>GITHUB</span>
-            <span>GMAIL</span>
-          </div>
         </div>
 
         <div class="pipeline" id="flowBar">
@@ -191,6 +179,15 @@
           </div>
         </div>
         <textarea id="prompt">What do you remember about what I am building, and what should I focus on next?</textarea>
+        <div class="input-tools" aria-label="Voice and file tools">
+          <button id="micBtn" type="button">Voice In</button>
+          <button id="speakBtn" type="button" class="selected">Voice Reply On</button>
+          <label class="file-tool">
+            Attach Files
+            <input id="fileInput" type="file" multiple />
+          </label>
+        </div>
+        <div id="attachmentSummary" class="attachment-summary">No files attached.</div>
         <div class="route-controls" aria-label="Routing policy">
           <button class="selected" data-route="auto">AUTO</button>
           <button data-route="memory_first">MEMORY FIRST</button>
@@ -249,6 +246,6 @@
     </footer>
   </main>
 
-  <script src="/static/app.js?v=cortex-20260922d"></script>
+  <script src="/static/app.js?v=cortex-20260922e"></script>
 </body>
 </html>

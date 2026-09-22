@@ -43,6 +43,10 @@ let activeRouteMode = "auto";
 let stageQueue = [];
 let stageTimer = null;
 let cortex = null;
+let attachedContext = "";
+let lastSpokenText = "";
+let voiceReplyEnabled = true;
+let recognition = null;
 
 const cortexNodes = {
   input: { x: 0.08, y: 0.16, color: "#f3f7fb", label: "Prompt" },
@@ -162,6 +166,98 @@ function escapeHtml(value) {
   const div = document.createElement("div");
   div.textContent = value ?? "";
   return div.innerHTML;
+}
+
+function updateAttachmentSummary(text) {
+  const el = $("attachmentSummary");
+  if (el) el.textContent = text;
+}
+
+function answerSpeechText(data) {
+  const route = data.route || {};
+  const finalAnswer = String(data.answer || "")
+    .replace(/\n?\[Strands fallback:[^\]]+\]\s*$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const sources = [
+    "Respuesta de InnerOS Personal Brain.",
+    `Ruta ${String(route.route_policy || "auto").replaceAll("_", " ")}.`,
+    `Cognee ${((data.memory_hits || []).filter((item) => !(item.metadata || {}).unavailable)).length} memorias.`,
+    `Bright Data ${(data.web_hits || []).length} resultados.`,
+    route.fallback_active ? "La ruta reporto degradacion." : "Sin degradacion reportada.",
+  ].join(" ");
+  return `${sources} ${finalAnswer}`.slice(0, 1800);
+}
+
+function speakText(text) {
+  if (!("speechSynthesis" in window)) {
+    addEvent("Voice", "error", "Speech synthesis is not available in this browser");
+    return;
+  }
+  const clean = String(text || "").trim();
+  if (!clean) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(clean);
+  utterance.lang = navigator.language || "es-US";
+  utterance.rate = 0.98;
+  utterance.pitch = 1.02;
+  window.speechSynthesis.speak(utterance);
+}
+
+async function readAttachedFiles(files) {
+  const selected = Array.from(files || []);
+  if (!selected.length) {
+    attachedContext = "";
+    updateAttachmentSummary("No files attached.");
+    return;
+  }
+  const chunks = [];
+  let total = 0;
+  for (const file of selected.slice(0, 6)) {
+    const text = await file.text();
+    const clipped = text.slice(0, 24000);
+    total += clipped.length;
+    chunks.push(
+      `--- FILE: ${file.name} (${file.type || "unknown type"}, ${file.size} bytes) ---\n${clipped}`,
+    );
+  }
+  attachedContext = chunks.join("\n\n").slice(0, 120000);
+  updateAttachmentSummary(`${selected.length} file(s) attached for analysis · ${total.toLocaleString()} chars loaded locally.`);
+}
+
+function setupVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    $("micBtn").disabled = true;
+    $("micBtn").textContent = "Voice In N/A";
+    return;
+  }
+  recognition = new SpeechRecognition();
+  recognition.lang = navigator.language || "es-US";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.onstart = () => {
+    $("micBtn").classList.add("selected");
+    $("micBtn").textContent = "Listening...";
+  };
+  recognition.onend = () => {
+    $("micBtn").classList.remove("selected");
+    $("micBtn").textContent = "Voice In";
+  };
+  recognition.onerror = (event) => {
+    addEvent("Voice", "error", event.error || "Speech recognition error");
+  };
+  recognition.onresult = (event) => {
+    const transcript = Array.from(event.results)
+      .map((result) => result[0]?.transcript || "")
+      .join(" ")
+      .trim();
+    if (transcript) {
+      const prompt = $("prompt");
+      prompt.value = `${prompt.value.trim()}\n\n${transcript}`.trim();
+      addEvent("Voice", "complete", "Dictation appended to prompt");
+    }
+  };
 }
 
 function normalizeState(state) {
@@ -793,10 +889,15 @@ function renderResult(data) {
   $("evidenceSummary").textContent = degraded.length
     ? "Trace completed with provider degradations clearly labeled."
     : "Trace completed with live backend evidence.";
+  lastSpokenText = answerSpeechText(data);
+  if (voiceReplyEnabled) speakText(lastSpokenText);
 }
 
 async function runBrain(act) {
-  const prompt = $("prompt").value.trim();
+  const basePrompt = $("prompt").value.trim();
+  const prompt = attachedContext
+    ? `${basePrompt}\n\nATTACHED FILE CONTEXT FOR ANALYSIS:\n${attachedContext}`
+    : basePrompt;
   if (!prompt) return;
 
   $("thinkBtn").disabled = true;
@@ -817,7 +918,6 @@ async function runBrain(act) {
       stream.close();
       $("thinkBtn").disabled = false;
       $("actBtn").disabled = false;
-      setTimeout(clearAnimation, 1600);
       loadStatus();
     }
   };
@@ -832,6 +932,23 @@ async function runBrain(act) {
 
 $("thinkBtn").addEventListener("click", () => runBrain(false));
 $("actBtn").addEventListener("click", () => runBrain(true));
+$("micBtn").addEventListener("click", () => {
+  if (recognition) recognition.start();
+});
+$("speakBtn").addEventListener("click", () => {
+  voiceReplyEnabled = !voiceReplyEnabled;
+  $("speakBtn").classList.toggle("selected", voiceReplyEnabled);
+  $("speakBtn").textContent = voiceReplyEnabled ? "Voice Reply On" : "Voice Reply Off";
+  if (voiceReplyEnabled && lastSpokenText) speakText(lastSpokenText);
+  if (!voiceReplyEnabled && "speechSynthesis" in window) window.speechSynthesis.cancel();
+});
+$("fileInput").addEventListener("change", (event) => {
+  readAttachedFiles(event.target.files).catch((error) => {
+    attachedContext = "";
+    updateAttachmentSummary("Could not read attached file(s).");
+    addEvent("Files", "error", error.message || "Attachment read failed");
+  });
+});
 document.querySelectorAll("[data-route]").forEach((button) => {
   button.addEventListener("click", () => {
     activeRouteMode = button.dataset.route || "auto";
@@ -841,5 +958,6 @@ document.querySelectorAll("[data-route]").forEach((button) => {
 });
 
 setupCortex();
+setupVoiceInput();
 loadStatus();
 setInterval(loadStatus, 15000);

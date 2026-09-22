@@ -567,68 +567,91 @@ h1 {
   background: #ff8f6f;
 }
 
-.agents-strip {
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 14px;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.agents-strip span {
-  min-width: 0;
-  padding: 8px 6px;
-  border: 1px solid rgba(142, 188, 211, 0.36);
-  border-radius: 8px;
-  background: rgba(7, 16, 24, 0.88);
-  color: #c8d9e1;
-  text-align: center;
-  font-size: 10px;
-  font-weight: 850;
-  overflow-wrap: anywhere;
-}
-
 .pipeline {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 11px;
+  border: 1px solid rgba(128, 199, 255, 0.22);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(128, 199, 255, 0.08), rgba(7, 18, 27, 0.84)),
+    #07121b;
+}
+
+.pipeline:before {
+  content: "";
+  position: absolute;
+  left: 34px;
+  right: 34px;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(103, 230, 210, 0), rgba(128, 199, 255, 0.55), rgba(103, 230, 210, 0));
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .pipeline > div {
+  position: relative;
   min-width: 0;
   display: grid;
-  grid-template-columns: 28px 1fr;
+  grid-template-columns: 34px 1fr;
   gap: 8px;
   align-items: center;
-  padding: 9px;
-  border: 1px solid var(--line);
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid rgba(63, 107, 130, 0.68);
   border-radius: 8px;
-  background: #0a1722;
+  background:
+    radial-gradient(circle at 22px 50%, rgba(128, 199, 255, 0.12), transparent 42px),
+    rgba(8, 20, 31, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(236, 244, 248, 0.02);
 }
 
 .pipeline > div.active {
   border-color: var(--blue);
-  background: #10253a;
+  background:
+    radial-gradient(circle at 22px 50%, rgba(128, 199, 255, 0.32), transparent 48px),
+    #10253a;
+  box-shadow: 0 0 20px rgba(128, 199, 255, 0.22), inset 0 0 0 1px rgba(128, 199, 255, 0.16);
 }
 
 .pipeline > div.complete {
-  border-color: rgba(141, 230, 165, 0.64);
-  background: #0e211b;
+  border-color: rgba(103, 230, 210, 0.86);
+  background:
+    radial-gradient(circle at 22px 50%, rgba(103, 230, 210, 0.34), transparent 48px),
+    linear-gradient(180deg, rgba(12, 45, 54, 0.96), rgba(9, 27, 32, 0.96));
+  box-shadow: 0 0 22px rgba(103, 230, 210, 0.22), inset 0 0 0 1px rgba(103, 230, 210, 0.18);
 }
 
 .pipeline b {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   border-radius: 999px;
-  border: 1px solid var(--line-strong);
+  border: 1px solid rgba(128, 199, 255, 0.72);
   color: var(--teal);
   font-size: 12px;
+  background: rgba(3, 12, 18, 0.82);
+  box-shadow: 0 0 13px rgba(128, 199, 255, 0.12);
+}
+
+.pipeline > div.complete b {
+  color: #041116;
+  border-color: #80c7ff;
+  background: #80c7ff;
+  box-shadow: 0 0 20px rgba(128, 199, 255, 0.78), 0 0 42px rgba(103, 230, 210, 0.3);
+  font-size: 0;
+}
+
+.pipeline > div.complete b:after {
+  content: "✓";
+  font-size: 18px;
+  font-weight: 950;
+  line-height: 1;
 }
 
 .pipeline span {
@@ -662,6 +685,47 @@ textarea {
 
 textarea:focus {
   border-color: var(--blue);
+}
+
+.input-tools {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.input-tools button,
+.file-tool {
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--text);
+  background: #0a1722;
+  font-size: 11px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.input-tools button.selected {
+  color: #041111;
+  background: var(--teal);
+  border-color: var(--teal);
+  box-shadow: 0 0 16px rgba(103, 230, 210, 0.24);
+}
+
+.file-tool input {
+  display: none;
+}
+
+.attachment-summary {
+  margin-top: 8px;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .button-row,
@@ -978,15 +1042,8 @@ footer strong {
     font-size: 8px;
   }
 
-  .agents-strip,
   .pipeline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .agents-strip {
-    position: static;
-    padding: 0 10px 12px;
-    margin-top: 8px;
   }
 
   .pipeline {
@@ -999,6 +1056,10 @@ footer strong {
 
   .route-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .input-tools {
+    grid-template-columns: 1fr;
   }
 
   footer {
