@@ -6,6 +6,7 @@ from app.adapters import BrightDataAdapter, DemoMemoryAdapter
 from app.brain import PersonalBrain
 from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
 from app.memory_fabric import build_memory_fabric
+from app.models import Evidence
 from app.proof_modes import ProofModeRunner
 
 
@@ -16,6 +17,29 @@ class NoWeb:
     async def search(self, query: str, limit: int = 5):
         self.calls += 1
         return []
+
+
+class FlakyIdentityWeb:
+    def __init__(self):
+        self.queries = []
+
+    async def search(self, query: str, limit: int = 5):
+        self.queries.append(query)
+        if len(self.queries) == 1:
+            return [
+                Evidence(
+                    source="brightdata",
+                    summary="No high-confidence public organic result was returned.",
+                    metadata={"no_public_matches": True, "query": query},
+                )
+            ]
+        return [
+            Evidence(
+                source="brightdata",
+                summary="Rafael Lopez Rafa-Innerchispa public profile",
+                metadata={"title": "Rafael Lopez Rafa-Innerchispa", "url": "https://github.com/Rafa-Innerchispa"},
+            )
+        ]
 
 
 class FastTestBrain(PersonalBrain):
@@ -204,6 +228,21 @@ async def test_identity_questions_use_cognee_and_brightdata_in_auto_route():
     assert result.route["route_policy"] == "identity_memory_web"
     assert result.route["evidence_refs"]["brightdata_query"] == "Rafael Lopez InnerChispa Rafa-Innerchispa"
     assert "local_qwen_vllm" in result.route["sources_used"]
+
+
+@pytest.mark.asyncio
+async def test_identity_questions_retry_brightdata_when_first_serp_has_no_matches():
+    memory = DemoMemoryAdapter(seed=["Ralphi is building InnerOS Personal Brain for the hackathon."])
+    web = FlakyIdentityWeb()
+    brain = FastTestBrain(memory=memory, web=web)
+
+    result = await brain.answer("quien soy yo Rafael Lopez InnerChispa?", act=False)
+
+    assert len(web.queries) == 2
+    assert web.queries[0] == "Rafael Lopez InnerChispa Rafa-Innerchispa"
+    assert web.queries[1] == "Rafa-Innerchispa"
+    assert result.web_hits[0].metadata["title"] == "Rafael Lopez Rafa-Innerchispa"
+    assert result.route["evidence_refs"]["brightdata_query"] == "Rafa-Innerchispa"
 
 
 @pytest.mark.asyncio

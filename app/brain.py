@@ -72,6 +72,16 @@ class PersonalBrain:
     def _public_personal_context_query(cls, prompt: str) -> str:
         return f"{cls._public_identity_query()} {prompt}"[:500]
 
+    @classmethod
+    def _public_identity_retry_queries(cls) -> tuple[str, ...]:
+        primary = cls._public_identity_query()
+        return (
+            primary,
+            "Rafa-Innerchispa",
+            "Rafael Lopez InnerChispa",
+            "InnerChispa Rafael",
+        )
+
     @staticmethod
     def _needs_live_web(prompt: str) -> bool:
         text = f" {prompt.lower()} "
@@ -250,6 +260,23 @@ class PersonalBrain:
             })
             tool_calls["brightdata_search"] += 1
             web_hits = await self.web.search(route["web_query"])
+            if (
+                route.get("owner_identity_query")
+                and web_hits
+                and all(bool(hit.metadata.get("no_public_matches")) for hit in web_hits)
+            ):
+                seen_queries = {route["web_query"]}
+                for retry_query in self._public_identity_retry_queries():
+                    if retry_query in seen_queries:
+                        continue
+                    seen_queries.add(retry_query)
+                    trace.append(f"discover:retry-live-web:{retry_query}")
+                    tool_calls["brightdata_search"] += 1
+                    retry_hits = await self.web.search(retry_query)
+                    if retry_hits and not all(bool(hit.metadata.get("no_public_matches")) for hit in retry_hits):
+                        web_hits = retry_hits
+                        route["web_query"] = retry_query
+                        break
             if not web_hits:
                 web_hits = [
                     Evidence(
