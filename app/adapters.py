@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import re
+from html import unescape
 from urllib.parse import quote_plus
 from dataclasses import dataclass
 from pathlib import Path
@@ -300,6 +302,17 @@ class BrightDataAdapter:
     def _extract_rest_organic(payload: object) -> list[dict]:
         if not isinstance(payload, dict):
             return []
+        body = payload.get("body")
+        if isinstance(body, str) and body.strip():
+            try:
+                parsed_body = json.loads(body)
+                body_results = BrightDataAdapter._extract_rest_organic(parsed_body)
+                if body_results:
+                    return body_results
+            except json.JSONDecodeError:
+                body_results = BrightDataAdapter._extract_google_html_organic(body)
+                if body_results:
+                    return body_results
         candidates = [
             payload.get("organic"),
             payload.get("organic_results"),
@@ -319,6 +332,32 @@ class BrightDataAdapter:
                 return [item for item in candidate if isinstance(item, dict)]
         return []
 
+    @staticmethod
+    def _strip_html(value: str) -> str:
+        text = re.sub(r"<[^>]+>", " ", value)
+        return re.sub(r"\s+", " ", unescape(text)).strip()
+
+    @staticmethod
+    def _extract_google_html_organic(html: str) -> list[dict]:
+        results: list[dict] = []
+        pattern = re.compile(
+            r'<a[^>]+href="(?P<link>https?://[^"#]+)"[^>]*>.*?<h3[^>]*>(?P<title>.*?)</h3>',
+            re.IGNORECASE | re.DOTALL,
+        )
+        seen: set[str] = set()
+        for match in pattern.finditer(html):
+            link = unescape(match.group("link"))
+            title = BrightDataAdapter._strip_html(match.group("title"))
+            if not title or link in seen:
+                continue
+            if any(blocked in link for blocked in ("google.com/search", "webcache", "accounts.google")):
+                continue
+            seen.add(link)
+            results.append({"title": title, "description": "", "link": link})
+            if len(results) >= 10:
+                break
+        return results
+
     async def _search_rest_serp(self, query: str, limit: int) -> list[Evidence]:
         if not self.rest_api_key or not self.rest_zone:
             return []
@@ -331,7 +370,7 @@ class BrightDataAdapter:
             "zone": self.rest_zone,
             "url": search_url,
             "format": "json",
-            "data_format": "parsed_light",
+            "data_format": "parsed",
         }
         async with httpx.AsyncClient(timeout=httpx.Timeout(35.0, connect=12.0)) as client:
             response = await client.post(self.rest_endpoint, headers=headers, json=parsed_payload)

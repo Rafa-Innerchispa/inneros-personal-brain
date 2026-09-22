@@ -283,39 +283,6 @@ async function runBrain(act) {
   };
 }
 
-function proofText(result) {
-  const evidence = (result.evidence || []).map((item) => {
-    if (typeof item === "string") return "- " + item;
-    return "- " + Object.entries(item).map(([key, value]) => `${key}: ${value}`).join(" · ");
-  }).join("\n");
-  return `${result.mode} · ${result.status}\n\n${result.summary || ""}\n\n${evidence}`;
-}
-
-async function runProof(mode) {
-  resetRunUi();
-  addEvent("Judge Mode", "active", `${mode.toUpperCase()} proof requested`);
-  const button = document.querySelector(`[data-proof="${mode}"]`);
-  if (button) button.disabled = true;
-
-  try {
-    const response = await fetch(`/api/proof/${mode}`, { method: "POST" });
-    const result = await response.json();
-    const stage = mode === "share" ? "learn" : mode;
-    const technology = mode === "observe" ? "brightdata" : mode === "govern" ? "govern" : "cognee";
-    activateStage(stage, technology, result.status === "PASS" ? "complete" : "active", result.summary);
-    $("answer").textContent = proofText(result);
-    $("metrics").innerHTML = `<span>${escapeHtml(result.mode)}</span><span>${escapeHtml(result.status)}</span>`;
-    $("evidenceSummary").textContent = "Judge Mode uses backend proof endpoints.";
-  } catch (error) {
-    addEvent("Judge Mode", "error", String(error));
-    $("answer").textContent = "Proof mode failed: " + String(error);
-  } finally {
-    if (button) button.disabled = false;
-    setTimeout(clearAnimation, 1600);
-    loadStatus();
-  }
-}
-
 $("thinkBtn").addEventListener("click", () => runBrain(false));
 $("actBtn").addEventListener("click", () => runBrain(true));
 document.querySelectorAll("[data-route]").forEach((button) => {
@@ -324,14 +291,6 @@ document.querySelectorAll("[data-route]").forEach((button) => {
     document.querySelectorAll("[data-route]").forEach((item) => item.classList.toggle("selected", item === button));
     $("modePill").textContent = "ROUTE " + activeRouteMode.replace("_", " ").toUpperCase();
   });
-});
-document.querySelectorAll("[data-prompt]").forEach((button) => {
-  button.addEventListener("click", () => {
-    $("prompt").value = button.dataset.prompt;
-  });
-});
-document.querySelectorAll("[data-proof]").forEach((button) => {
-  button.addEventListener("click", () => runProof(button.dataset.proof));
 });
 
 loadStatus();
