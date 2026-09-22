@@ -236,6 +236,24 @@ class PersonalBrain:
             })
             tool_calls["brightdata_search"] += 1
             web_hits = await self.web.search(route["web_query"])
+            if not web_hits and route["owner_identity_query"]:
+                web_hits = [
+                    Evidence(
+                        source="brightdata",
+                        summary=(
+                            "[BRIGHT DATA LIVE SEARCH][NO PUBLIC MATCHES] "
+                            f"Bright Data searched the public web for: {route['web_query']}. "
+                            "No high-confidence public organic result was returned for this identity query."
+                        ),
+                        metadata={
+                            "live": True,
+                            "no_public_matches": True,
+                            "query": route["web_query"],
+                            "title": "Bright Data public identity search",
+                            "url": "",
+                        },
+                    )
+                ]
             replay = any(bool(x.metadata.get("verified_replay")) for x in web_hits)
             await self._emit(emit, {
                 "stage": "observe",

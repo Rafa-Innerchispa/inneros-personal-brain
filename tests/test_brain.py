@@ -183,7 +183,8 @@ async def test_identity_questions_use_cognee_and_brightdata_in_auto_route():
 
     assert web.calls == 1
     assert result.memory_hits
-    assert result.web_hits == []
+    assert result.web_hits
+    assert result.web_hits[0].metadata["no_public_matches"] is True
     assert result.route["route_policy"] == "identity_memory_web"
     assert result.route["evidence_refs"]["brightdata_query"] == "Rafael Lopez Ralphi IA InnerChispa PC Doctor InnerOS"
     assert "local_qwen_vllm" in result.route["sources_used"]
