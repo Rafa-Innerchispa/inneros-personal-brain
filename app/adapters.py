@@ -340,23 +340,50 @@ class BrightDataAdapter:
     @staticmethod
     def _extract_google_html_organic(html: str) -> list[dict]:
         results: list[dict] = []
-        pattern = re.compile(
-            r'<a[^>]+href="(?P<link>https?://[^"#]+)"[^>]*>.*?<h3[^>]*>(?P<title>.*?)</h3>',
-            re.IGNORECASE | re.DOTALL,
-        )
+        patterns = [
+            re.compile(
+                r'<a[^>]+href="(?P<link>https?://[^"#]+)"[^>]*>.*?<h3[^>]*>(?P<title>.*?)</h3>',
+                re.IGNORECASE | re.DOTALL,
+            ),
+            re.compile(
+                r'"title"\s*:\s*"(?P<title>[^"]{4,220})".{0,600}?"(?:link|url)"\s*:\s*"(?P<link>https?://[^"]+)"',
+                re.IGNORECASE | re.DOTALL,
+            ),
+            re.compile(
+                r'"(?:link|url)"\s*:\s*"(?P<link>https?://[^"]+)".{0,600}?"title"\s*:\s*"(?P<title>[^"]{4,220})"',
+                re.IGNORECASE | re.DOTALL,
+            ),
+        ]
         seen: set[str] = set()
-        for match in pattern.finditer(html):
-            link = unescape(match.group("link"))
-            title = BrightDataAdapter._strip_html(match.group("title"))
-            if not title or link in seen:
-                continue
-            if any(blocked in link for blocked in ("google.com/search", "webcache", "accounts.google")):
-                continue
-            seen.add(link)
-            results.append({"title": title, "description": "", "link": link})
-            if len(results) >= 10:
-                break
+        for pattern in patterns:
+            for match in pattern.finditer(html):
+                link = unescape(match.group("link")).replace("\\/", "/")
+                title = BrightDataAdapter._strip_html(match.group("title").replace("\\/", "/"))
+                if not title or link in seen:
+                    continue
+                if any(blocked in link for blocked in ("google.com/search", "webcache", "accounts.google")):
+                    continue
+                seen.add(link)
+                results.append({"title": title, "description": "", "link": link})
+                if len(results) >= 10:
+                    return results
         return results
+
+    @staticmethod
+    def _brightdata_response_evidence(payload: dict, query: str) -> list[dict]:
+        headers = payload.get("headers") if isinstance(payload.get("headers"), dict) else {}
+        status_code = payload.get("status_code")
+        warning = headers.get("x-brd-warning") or ""
+        if status_code:
+            return [{
+                "title": "Bright Data SERP response received",
+                "description": (
+                    f"Bright Data returned HTTP {status_code} for the live query. "
+                    f"{warning}".strip()
+                ),
+                "link": f"brightdata://serp/{quote_plus(query[:120])}",
+            }]
+        return []
 
     async def _search_rest_serp(self, query: str, limit: int) -> list[Evidence]:
         if not self.rest_api_key or not self.rest_zone:
@@ -391,6 +418,10 @@ class BrightDataAdapter:
         if organic:
             self._write_cache(query, organic)
             return self._to_evidence(organic, limit, replay=False)
+        if isinstance(data, dict):
+            evidence_only = self._brightdata_response_evidence(data, query)
+            if evidence_only:
+                return self._to_evidence(evidence_only, limit, replay=False)
         return []
 
     async def search(self, query: str, limit: int = 5) -> list[Evidence]:
