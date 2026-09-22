@@ -19,6 +19,7 @@ from app.adapters import (
 from app.brain import PersonalBrain
 from app.demo_memory import seed_in_background, seed_status
 from app.models import BrainRequest, BrainResponse
+from app.proof_modes import ProofModeRunner
 from app.status import sponsor_status
 
 
@@ -51,6 +52,10 @@ def build_brain() -> PersonalBrain:
 brain = build_brain()
 
 
+def build_proof_runner() -> ProofModeRunner:
+    return ProofModeRunner(memory=brain.memory, web=BrightDataAdapter())
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"ok": True, "service": "inneros-personal-brain", "version": "0.3.0"}
@@ -66,6 +71,39 @@ async def status() -> dict:
     data = sponsor_status()
     data["memory_seed"] = seed_status()
     return data
+
+
+@app.get("/api/proof/modes")
+async def proof_modes() -> dict:
+    return {
+        "modes": [
+            {
+                "key": "remember",
+                "label": "REMEMBER",
+                "description": "Prompt -> Strands memory injection -> Cognee recall -> answer + provenance",
+            },
+            {
+                "key": "observe",
+                "label": "OBSERVE",
+                "description": "Prompt -> Bright Data live evidence -> reasoning provenance",
+            },
+            {
+                "key": "govern",
+                "label": "GOVERN",
+                "description": "Action proposed -> deterministic policy check -> blocked for human approval",
+            },
+            {
+                "key": "share",
+                "label": "SHARE",
+                "description": "Agent A writes a harmless fact -> Agent B recalls it from Cognee",
+            },
+        ]
+    }
+
+
+@app.post("/api/proof/{mode}")
+async def run_proof_mode(mode: str) -> dict:
+    return await build_proof_runner().run(mode)
 
 
 @app.post("/api/brain", response_model=BrainResponse)

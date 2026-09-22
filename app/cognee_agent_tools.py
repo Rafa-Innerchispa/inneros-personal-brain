@@ -144,3 +144,111 @@ class CogneeAgentMemoryTools:
             "remember_calls": self.remember_calls,
             "direct_agent_tools": True,
         }
+
+
+@dataclass
+class CogneeMemoryStore:
+    """Small Strands MemoryManager-compatible Cognee store.
+
+    The installed Strands SDK version may expose different MemoryManager entry
+    points, so this class keeps the stable surface we need: search/add against
+    the same Cognee dataset. PersonalBrain uses it for safe automatic memory
+    injection evidence and can be passed to a native MemoryManager where the SDK
+    supports compatible stores.
+    """
+
+    base_url: str = field(default_factory=lambda: os.getenv("COGNEE_SERVICE_URL", "https://api.cognee.ai").rstrip("/"))
+    api_key: str = field(default_factory=lambda: os.getenv("COGNEE_API_KEY", ""))
+    dataset: str = field(default_factory=lambda: os.getenv("COGNEE_DATASET", "inneros-personal-brain"))
+    injected_count: int = 0
+    add_count: int = 0
+
+    @property
+    def ready(self) -> bool:
+        return bool(self.base_url and self.api_key)
+
+    def _headers(self) -> dict[str, str]:
+        return {"X-Api-Key": self.api_key}
+
+    async def search(self, query: str, limit: int = 6) -> list[str]:
+        if not self.ready:
+            return []
+        payload = {
+            "search_type": None,
+            "datasets": [self.dataset],
+            "query": query[:1200],
+            "top_k": max(1, min(limit, 12)),
+            "only_context": True,
+            "verbose": True,
+        }
+        async with httpx.AsyncClient(timeout=35, follow_redirects=True) as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/recall",
+                headers=self._headers(),
+                json=payload,
+            )
+            if response.status_code == 422:
+                legacy_payload = {
+                    "searchType": None,
+                    "datasets": payload["datasets"],
+                    "query": payload["query"],
+                    "topK": payload["top_k"],
+                    "onlyContext": True,
+                    "verbose": True,
+                }
+                response = await client.post(
+                    f"{self.base_url}/api/v1/recall",
+                    headers=self._headers(),
+                    json=legacy_payload,
+                )
+            response.raise_for_status()
+            rows = response.json()
+        if not isinstance(rows, list):
+            rows = [rows]
+        memories: list[str] = []
+        for row in rows[:limit]:
+            if isinstance(row, dict):
+                memories.append(str(row.get("text") or row.get("content") or row))
+            else:
+                memories.append(str(row))
+        self.injected_count += len(memories)
+        return memories
+
+    async def add(self, text: str, metadata: dict[str, Any] | None = None) -> dict[str, Any]:
+        if not self.ready:
+            return {"ok": False, "reason": "cognee_credentials_missing", "dataset": self.dataset}
+        envelope = text if not metadata else json.dumps(
+            {"text": text[:4000], "metadata": metadata},
+            ensure_ascii=False,
+            default=str,
+        )
+        files = [
+            ("raw_data", (None, envelope[:4000])),
+            ("datasetName", (None, self.dataset)),
+            ("run_in_background", (None, "true")),
+            ("node_set", (None, "strands-memory-manager")),
+        ]
+        async with httpx.AsyncClient(timeout=35, follow_redirects=True) as client:
+            response = await client.post(
+                f"{self.base_url}/api/v1/remember",
+                headers=self._headers(),
+                files=files,
+            )
+            response.raise_for_status()
+        self.add_count += 1
+        return {"ok": True, "provider": "cognee", "dataset": self.dataset, "stored": True}
+
+    def status(self) -> dict[str, Any]:
+        try:
+            import strands  # noqa: F401
+            sdk_present = True
+        except Exception:
+            sdk_present = False
+        return {
+            "ready": self.ready,
+            "sdk_present": sdk_present,
+            "dataset": self.dataset,
+            "injected_count": self.injected_count,
+            "add_count": self.add_count,
+            "compatible_surface": "search/add",
+        }

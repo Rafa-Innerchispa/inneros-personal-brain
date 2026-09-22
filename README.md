@@ -1,83 +1,63 @@
 # InnerOS Personal Brain
 
-**A personal AI that remembers, discovers, reasons, acts, verifies, and learns.**
+**ONE MEMORY. MULTIPLE AGENTS. LOCAL-FIRST.**
 
 Built for **Battle of the Personal Brains, San Francisco, September 21, 2026**.
 
-## Why
+InnerOS Personal Brain is a live cognitive loop over the existing InnerOS / Ralphi IA ecosystem. Cognee is the portable shared memory brain, Bright Data is live perception, AWS Strands coordinates reasoning and tools, local Qwen/vLLM keeps inference sovereign, and Docker Sandboxes execute bounded actions only after policy checks.
 
-Most AI assistants start each conversation from zero. InnerOS Personal Brain combines persistent personal memory with live external context and governed action execution:
+## Winning Story
 
-**Remember → Discover → Reason → Act → Verify → Remember**
+Most assistants start from zero. This one can:
 
-The hackathon application is a thin product layer over the existing InnerOS / Ralphi IA ecosystem. It does not copy private databases or provider secrets into this repository.
+- remember durable personal/project context through Cognee;
+- observe the public web through Bright Data SERP REST or MCP search;
+- reason through Strands with direct Cognee memory tools;
+- govern actions before execution;
+- act in a sandbox when allowed;
+- learn verified outcomes back into Cognee.
 
-## Sponsor stack
-
-| Technology | Role | Live evidence |
-| --- | --- | --- |
-| Cognee | Persistent structured memory and knowledge graph | Real Cloud remember + recall smoke passes |
-| Bright Data | Live public-web intelligence | Existing InnerOS provider/MCP performs real searches |
-| AWS Strands Agents | Reasoning and tool orchestration | Real Strands agent runs against local vLLM/Qwen3 |
-| Docker Sandboxes | Isolated action execution | Authenticated KVM sandbox executes and verifies a real artifact |
-
-## Architecture
+The demo loop is:
 
 ```text
-Personal Brain UI
-       |
-       v
-   FastAPI
-       |
-       +---- Cognee Cloud -------- persistent graph memory
-       |
-       +---- InnerOS / Ralphi MCP - existing personal/project context
-       |
-       +---- Bright Data ---------- live public web
-       |
-       +---- AWS Strands ---------- reasoning/orchestration
-                  |
-                  v
-             local vLLM
-             Qwen3-Coder 30B
-                  |
-                  v
-           Docker Sandbox
-                  |
-                  v
-          evidence + outcome
-                  |
-                  +----> Cognee memory
+Observe -> Remember -> Reason -> Govern/Act -> Verify -> Learn
 ```
 
-## Demo runtime
+## Two-Brain Architecture
 
-Primary demo host uses:
+```text
+INNEROS / RALPHI LOCAL BRAIN                 COGNEE SHARED MEMORY BRAIN
+private ops, tools, infra                    portable graph memory
+Mongo/Qdrant metadata                        dataset: inneros-personal-brain
+MCP/A2A coordination                         Codex / Cursor / Antigravity / Strands
+        |                                                  ^
+        | curated safe facts, decisions, outcomes          |
+        +---------------- CURATED MEMORY BRIDGE -----------+
+```
 
-- FastAPI / Uvicorn on port 8230
-- AWS Strands Agents
-- OpenAI-compatible vLLM endpoint on localhost:18000
-- Cognee Cloud tenant through a protected runtime environment file
-- Docker Sandboxes CLI v0.43.0 on an Ubuntu 24.04 KVM-capable host
+Cognee is not a decorative memory cache. It is the central shared dataset that multiple agents can recall from and write to. Ralphi MCP remains the local coordination and operations nervous system; losing that route must not erase the Personal Brain's Cognee memory.
 
-Secrets are ignored by Git and never embedded in the frontend.
+## Sponsor Stack
 
-## Verified smokes
+| Technology | Role | Proof surface |
+| --- | --- | --- |
+| Cognee | Shared graph memory and cross-agent recall | Product memory, official Cognee MCP, Strands memory tools |
+| Bright Data | Live public-web perception | SERP REST via `BRIGHTDATA_API_KEY`/zone or MCP `search_engine` |
+| AWS Strands Agents | Reasoning, tool orchestration, audit trail | Direct Cognee tools plus local model route |
+| Local Qwen/vLLM | Sovereign inference | `LOCAL_LLM_BASE_URL`, local or AMD on-demand route |
+| Docker Sandboxes | Governed execution | Bounded artifact action with evidence |
+| InnerOS / Ralphi IA | Local coordination fabric | Private MCP/A2A route, not the core memory store |
 
-- Product tests: PASS
-- Python compileall: PASS
-- Strands → local vLLM → Qwen3: PASS
-- Cognee Cloud health/OpenAPI: PASS
-- Cognee remember → knowledge graph → recall: PASS
-- FastAPI health/status/UI: PASS
-- Personal Brain API Cognee → Strands → remember outcome: PASS
-- Bright Data account/MCP/search: PASS; live search plus clearly labeled verified-replay fallback
-- Docker/KVM/sbx installation: PASS
-- Docker account authentication: PASS
-- Docker Sandbox real action artifact: PASS
-- Four-sponsor E2E: PASS (`all_four_green: true`)
+## Judge Mode
 
-## Run locally
+The UI includes four proof buttons backed by `/api/proof/{mode}`:
+
+- `REMEMBER`: Cognee recall with dataset/provenance evidence.
+- `OBSERVE`: Bright Data live search, with verified replay clearly labeled only when live search is unavailable.
+- `GOVERN`: consequential action is proposed, policy blocks it, and the proof says `NOT_EXECUTED`.
+- `SHARE`: Agent A writes a harmless marker and Agent B recalls it from Cognee.
+
+## Runtime
 
 ```bash
 python -m venv .venv
@@ -86,8 +66,27 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 127.0.0.1 --port 8230
 ```
 
-Runtime credentials belong in protected environment configuration, never in Git.
+Server-side environment variables:
 
-## Safety
+- `COGNEE_SERVICE_URL`
+- `COGNEE_API_KEY`
+- `COGNEE_DATASET=inneros-personal-brain`
+- `BRIGHTDATA_API_KEY`
+- `BRIGHTDATA_SERP_ZONE=inneros`
+- optional `BRIGHTDATA_API_TOKEN` or `BRIGHTDATA_MCP_URL`
+- optional `LOCAL_LLM_BASE_URL`, `LOCAL_LLM_MODEL`, `LOCAL_LLM_API_KEY`
 
-External actions are evidence-gated. The system does not claim an action ran unless its executor returns evidence. Bright Data falls back only to a clearly labeled verified replay when the live provider times out.
+Secrets are never embedded in the frontend or committed to Git.
+
+## Bright Data Choice
+
+For this hackathon demo, use **SERP API** first. It gives judges a fast and easy-to-explain "sees the world" proof for public search. Browser API is only needed for multi-step browser interaction, and Web Unlocker is only needed for a specific hard-to-access page extraction.
+
+## Verification Targets
+
+- Product tests: `python -m pytest`
+- Python syntax: `python -m compileall app tests`
+- Frontend syntax: `node --check app/static/app.js`
+- Git whitespace: `git diff --check`
+
+The demo should never claim a live route is active unless the backend reported it. Replays, missing OAuth, on-demand vLLM routes and blocked actions are intentionally labeled.

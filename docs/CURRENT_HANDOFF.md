@@ -6,7 +6,7 @@
 ## Canonical repo
 
 - Repo: `Rafa-Innerchispa/inneros-personal-brain`
-- `main`: `69237685ecf05f04617f03a682a02f2f4e5898c8`
+- `main`: `db45f597c90ac91ee2f81f7dba40fda784759834`
 - PR #2 MERGED: Live Cognitive Cortex + real Cognee memory.
 - PR #3 MERGED: Cognee shared agent memory fabric.
 - Unmerged connector work exists on:
@@ -46,16 +46,21 @@ Seed version:
 
 `2026-09-21-live-cortex-v1`
 
-17 curated operational facts are defined there, covering InnerOS, Ralphi MCP, Physical Guardian, VoiceOps, PC Doctor, InnerChispa, local compute, Resource Fabric, Cognee, Bright Data, Strands, Docker and demo architecture.
+48 curated operational facts are defined there, covering InnerOS, Ralphi MCP, Physical Guardian, VoiceOps, PC Doctor, InnerChispa, local compute, Resource Fabric, Cognee, Bright Data, Strands, Docker, governance, evidence, cross-agent memory and demo architecture.
 
 Verified:
 - Cognee Cloud health/OpenAPI PASS
 - remember -> graph build -> recall PASS
 - Personal Brain Cognee recall/remember PASS
 
-Direct Strands memory tools are already merged:
+Direct Strands memory tools are present on the active Codex branch:
 - `cognee_recall`
 - `cognee_remember`
+
+The branch also exposes a Strands MemoryManager-compatible `search`/`add`
+surface through `CogneeMemoryStore` so the demo can prove safe memory injection
+and direct Cognee agent memory without tying correctness to one SDK entry-point
+shape.
 
 Doc:
 `docs/COGNEE_AGENT_MEMORY_FABRIC.md`
@@ -175,8 +180,9 @@ Backend stream:
 - `/api/brain/stream`
 
 Visual intent:
-- x-ray brain
-- Strands central
+- two-brain map: InnerOS/Ralphi local brain + Cognee shared memory brain
+- Curated Memory Bridge
+- Strands central orchestrator
 - Cognee shared-memory graph
 - Bright Data observation
 - local Qwen reasoning
@@ -184,6 +190,7 @@ Visual intent:
 - Ralphi MCP tools
 - orbiting agents/connectors
 - real backend-driven stage events only
+- Judge Mode proof buttons: REMEMBER, OBSERVE, GOVERN, SHARE
 
 ## Service / public URL
 
@@ -228,7 +235,7 @@ and restarted it.
 
 **ONE MEMORY. MULTIPLE AGENTS. LOCAL-FIRST.**
 
-`Observe -> Remember -> Reason -> Act -> Learn`
+`Observe -> Remember -> Reason -> Govern/Act -> Verify -> Learn`
 
 - Bright Data = eyes
 - Cognee = shared long-term memory
@@ -240,6 +247,10 @@ and restarted it.
 Best proof:
 
 **Agent A learns -> Agent B remembers.**
+
+Current Codex branch has implemented this as `/api/proof/share`; it writes a
+harmless marker through the configured memory adapter and immediately recalls it
+from the same Cognee dataset when live credentials are available.
 
 ## Next chat: exact first actions
 

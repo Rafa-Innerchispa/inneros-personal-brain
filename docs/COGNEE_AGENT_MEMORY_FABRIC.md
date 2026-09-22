@@ -43,10 +43,19 @@ is not routed through Ralphi MCP.
 The UI reports these calls separately so a judge can see that Cognee is memory
 inside the reasoning agent, not merely preloaded prompt context.
 
-### 3. Cognee MCP
+### 3. Official Cognee MCP
 
-InnerOS already owns a reusable standalone Cognee MCP capability in
-`innerops-agentic-platform`. Cognee also ships its own official MCP server.
+Cognee MCP is a first-class shared-memory route, not a UI-only badge. The
+canonical local service is:
+
+```text
+inneros-cognee-mcp.service
+http://127.0.0.1:8241/mcp
+container: cognee/cognee-mcp:main
+```
+
+It should stay localhost-only and should not be killed or replaced by this demo
+unless the process has first been verified as non-canonical.
 
 The official server can run in Cloud Mode against the same tenant:
 
@@ -56,15 +65,20 @@ export COGNEE_API_KEY="YOUR_SECRET"
 python src/server.py --transport http --host 127.0.0.1 --port 8001 --path /mcp
 ```
 
-It exposes the memory-oriented tools `remember`, `recall`, and `forget`.
+It exposes the memory-oriented tools `remember`, `recall`, `forget`,
+`search_tools`, and `call_tool` when available.
 
 Any MCP client can then point at:
 
 ```text
-http://127.0.0.1:8001/mcp
+http://127.0.0.1:8241/mcp
 ```
 
 Do not put credentials in Git or client-side code.
+
+The repo keeps `app/cognee_mcp_proxy.py` only as a non-canonical fallback for
+local tests. Its default port is `8242` so it does not collide with the official
+Cognee MCP service.
 
 ### 4. Claude Code native plugin
 
@@ -145,6 +159,32 @@ Cognee supports two useful tiers for agents:
 
 Session memory can later be promoted into the permanent graph using Cognee's
 `improve` flow.
+
+## Strands memory-manager compatible surface
+
+`app.cognee_agent_tools.CogneeMemoryStore` exposes a small stable
+`search`/`add` interface over the same Cognee dataset. The installed Strands SDK
+can evolve its native MemoryManager entry points, but the product still proves
+the required behavior:
+
+- memory is recalled before reasoning;
+- safe snippets are injected into working context;
+- direct Strands tools can call `cognee_recall` and `cognee_remember`;
+- tool-audit metadata is emitted without secrets;
+- verified outcomes are stored back in Cognee.
+
+## Judge proof modes
+
+The demo has four backend proof modes:
+
+- `REMEMBER`: prompt -> memory injection -> Cognee recall -> answer/evidence;
+- `OBSERVE`: prompt -> Bright Data live evidence -> reasoning provenance;
+- `GOVERN`: action proposed -> policy check -> human approval required;
+- `SHARE`: Agent A writes a harmless marker -> Agent B recalls it from Cognee.
+
+These modes make the graph feel full while staying truthful: unavailable OAuth
+or live routes are shown as configured, pending, partial, or blocked instead of
+being faked.
 
 ## Demo story
 

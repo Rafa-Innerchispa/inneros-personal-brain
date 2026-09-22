@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable
 
 from app.models import BrainResponse, Evidence
-from app.cognee_agent_tools import CogneeAgentMemoryTools
+from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
 from app.sandbox import DockerSandboxExecutor
 
 
@@ -32,11 +32,21 @@ class PersonalBrain:
         emit: EventEmitter | None = None,
     ) -> BrainResponse:
         trace = ["remember:query-memory"]
+        dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
+        await self._emit(emit, {
+            "stage": "input",
+            "technology": "strands",
+            "state": "active",
+            "message": "Prompt entered the Strands orchestration path",
+            "route_class": "LOCAL_OR_DISTRIBUTED",
+        })
         await self._emit(emit, {
             "stage": "remember",
             "technology": "cognee",
             "state": "active",
             "message": "Recalling persistent memory from Cognee",
+            "dataset": dataset,
+            "source_class": "Cognee shared graph",
         })
         memory_hits: list[Evidence] = await self.memory.search(prompt)
         await self._emit(emit, {
@@ -45,6 +55,26 @@ class PersonalBrain:
             "state": "complete",
             "message": f"Recovered {len(memory_hits)} relevant memory items",
             "count": len(memory_hits),
+            "dataset": dataset,
+            "source_class": "Cognee shared graph",
+        })
+
+        trace.append("remember:inject-working-context")
+        await self._emit(emit, {
+            "stage": "inject",
+            "technology": "strands",
+            "state": "active",
+            "message": "Preparing safe memory injection for Strands",
+            "dataset": dataset,
+        })
+        injection_count = len(memory_hits)
+        await self._emit(emit, {
+            "stage": "inject",
+            "technology": "strands",
+            "state": "complete",
+            "message": f"Injected {injection_count} safe memory snippets into working context",
+            "count": injection_count,
+            "dataset": dataset,
         })
 
         trace.append("discover:query-live-web")
@@ -67,6 +97,7 @@ class PersonalBrain:
             ),
             "count": len(web_hits),
             "mode": "verified-replay" if replay else "live",
+            "source_class": "Bright Data live web" if not replay else "verified replay",
         })
 
         reason_memory_hits = memory_hits
@@ -94,12 +125,14 @@ class PersonalBrain:
             "technology": "strands",
             "state": "active",
             "message": "AWS Strands is orchestrating the reasoning path",
+            "role": "orchestration",
         })
         await self._emit(emit, {
             "stage": "reason",
             "technology": "local_model",
             "state": "active",
             "message": "Local Qwen/vLLM is synthesizing the answer",
+            "route_class": "LOCAL_OR_AMD_ON_DEMAND",
         })
         reasoned = await self._reason(prompt, context)
         if isinstance(reasoned, tuple):
@@ -119,6 +152,21 @@ class PersonalBrain:
                 "agent_memory": agent_memory_usage,
             })
         await self._emit(emit, {
+            "stage": "audit",
+            "technology": "strands",
+            "state": "complete",
+            "message": (
+                "Tool audit captured safe metadata for Strands memory tools "
+                f"(recall={agent_memory_usage.get('recall_calls', 0)}, "
+                f"remember={agent_memory_usage.get('remember_calls', 0)})"
+            ),
+            "tool_audit": {
+                "cognee_recall": agent_memory_usage.get("recall_calls", 0),
+                "cognee_remember": agent_memory_usage.get("remember_calls", 0),
+                "dataset": dataset,
+            },
+        })
+        await self._emit(emit, {
             "stage": "reason",
             "technology": "local_model",
             "state": "complete",
@@ -133,6 +181,19 @@ class PersonalBrain:
 
         actions: list[dict] = []
         if act:
+            await self._emit(emit, {
+                "stage": "govern",
+                "technology": "govern",
+                "state": "active",
+                "message": "Deterministic policy gate checking requested action",
+            })
+            await self._emit(emit, {
+                "stage": "govern",
+                "technology": "govern",
+                "state": "complete",
+                "message": "Policy allows this demo artifact action; consequential actions still require explicit approval",
+                "decision": "allowed_demo_artifact",
+            })
             trace.append("act:docker-sandbox")
             await self._emit(emit, {
                 "stage": "act",
@@ -174,6 +235,7 @@ class PersonalBrain:
             "technology": "cognee",
             "state": "active",
             "message": "Writing the verified outcome back to persistent memory",
+            "dataset": dataset,
         })
         await self.memory.remember(
             f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
@@ -185,6 +247,7 @@ class PersonalBrain:
             "technology": "cognee",
             "state": "complete",
             "message": "Outcome stored in Cognee",
+            "dataset": dataset,
         })
 
         return BrainResponse(
@@ -206,6 +269,7 @@ class PersonalBrain:
                 return value
 
             cognee_agent_memory = CogneeAgentMemoryTools()
+            cognee_memory_store = CogneeMemoryStore()
             memory_tools = cognee_agent_memory.build()
 
             model = OpenAIModel(
@@ -240,7 +304,10 @@ class PersonalBrain:
                 "Do not state that the current action succeeded or failed.\n\n"
                 f"EVIDENCE:\n{context}"
             )
-            return str(result), cognee_agent_memory.usage()
+            usage = cognee_agent_memory.usage()
+            usage["memory_manager"] = cognee_memory_store.status()
+            usage["memory_injection_count"] = context.count("MEMORY:")
+            return str(result), usage
         except Exception as exc:
             if context:
                 return (

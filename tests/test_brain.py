@@ -4,8 +4,9 @@ import pytest
 
 from app.adapters import BrightDataAdapter, DemoMemoryAdapter
 from app.brain import PersonalBrain
-from app.cognee_agent_tools import CogneeAgentMemoryTools
+from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
 from app.memory_fabric import build_memory_fabric
+from app.proof_modes import ProofModeRunner
 
 
 class NoWeb:
@@ -64,7 +65,7 @@ def test_live_cortex_static_assets_exist():
     html = (static / "index.html").read_text(encoding="utf-8")
     assert "BATTLE OF THE PERSONAL BRAINS" in html
     assert "LIVE COGNITIVE CORTEX" in html
-    assert "EXTERNAL NERVOUS SYSTEM" in html
+    assert "INNEROS / RALPHI" in html
 
 
 def test_cognee_agent_memory_tools_fail_closed_without_credentials(monkeypatch):
@@ -80,10 +81,10 @@ def test_live_cortex_explains_shared_agent_memory():
     html = Path("app/static/index.html").read_text(encoding="utf-8")
     js = Path("app/static/app.js").read_text(encoding="utf-8")
     assert "GRAPH · MCP · AGENTS" in html
-    assert "CLAUDE" in html
     assert "CODEX" in html
+    assert "CURSOR" in html
     assert "ANTIGRAVITY" in html
-    assert "Cognee ↔ Strands" in js
+    assert "Curated Memory Bridge" in js
     assert "Cognee MCP" in js
 
 
@@ -102,6 +103,7 @@ def test_memory_fabric_centers_cognee_and_brightdata(monkeypatch):
     assert fabric["dataset"] == "inneros-personal-brain"
     assert fabric["security"]["secrets_in_frontend"] is False
     assert fabric["security"]["ralphi_required_for_core_memory"] is False
+    assert fabric["brains"]["shared"]["label"] == "COGNEE SHARED MEMORY BRAIN"
     assert surfaces["personal_brain"]["state"] == "configured"
     assert surfaces["strands"]["transport"] == "direct Cognee agent tools"
     assert surfaces["brightdata"]["state"] == "ready"
@@ -121,6 +123,35 @@ def test_live_cortex_renders_fabric_matrix():
     assert "renderFabric" in js
     assert "brightdata" in js
     assert ".fabric-row" in css
+
+
+def test_memory_fabric_reports_distributed_routes():
+    fabric = build_memory_fabric().as_dict()
+    routes = {route["key"]: route for route in fabric["route_status"]}
+
+    assert routes["cognee_mcp"]["route_class"] == "LOCAL"
+    assert routes["ralphi_mcp_inneros_fabric"]["route_class"] == "TAILSCALE"
+    assert routes["qwen_vllm"]["route_class"] == "LOCAL_OR_AMD_ON_DEMAND"
+    assert "Windows localhost" in routes["qwen_vllm"]["evidence"]
+
+
+def test_cognee_memory_store_is_fail_closed_without_credentials(monkeypatch):
+    monkeypatch.delenv("COGNEE_API_KEY", raising=False)
+    store = CogneeMemoryStore()
+
+    assert store.ready is False
+    assert store.status()["compatible_surface"] == "search/add"
+
+
+@pytest.mark.asyncio
+async def test_govern_proof_mode_blocks_consequential_action():
+    runner = ProofModeRunner(memory=DemoMemoryAdapter(seed=[]), web=NoWeb())
+
+    result = await runner.run("govern")
+
+    assert result["status"] == "PASS"
+    assert result["evidence"][0]["metadata"]["truth"] == "NOT_EXECUTED"
+    assert "HUMAN APPROVAL REQUIRED" in result["summary"]
 
 
 def test_brightdata_rest_serp_payload_extracts_organic_results():

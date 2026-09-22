@@ -18,7 +18,7 @@ The answer should recover `INNEROS_COGNEE_MEMORY_OK_20260921` from the live Cogn
 
 Point out that the graph contains entities and relationships generated from the stored memory.
 
-## 2. Prove the brain exists outside the demo
+## 2. Prove the two-brain architecture
 
 Show ChatGPT connected to the InnerOS / Ralphi IA MCP.
 
@@ -30,21 +30,27 @@ Explain:
 
 Then point to the **Shared Memory Fabric** matrix:
 
+- The left brain is InnerOS / Ralphi local coordination and private operational memory.
 - Cognee is the center and the dataset is `inneros-personal-brain`.
+- The Curated Memory Bridge moves only safe durable facts, decisions and verified outcomes.
 - Bright Data is the live-world input.
 - Ralphi IA MCP is the ops/coordination layer.
 - Codex, Cursor, Antigravity and Strands are all memory surfaces of the same brain.
 - Gmail is shown as OAuth-gated when credentials are not configured, which is the
   correct secure state.
 
-For local agent clients, start the Cognee MCP bridge:
+For local agent clients, use the official Cognee MCP service:
 
-```bash
-python app/cognee_mcp_proxy.py
+```text
+http://127.0.0.1:8241/mcp
 ```
 
-It serves `remember`, `recall`, and `forget` at
-`http://127.0.0.1:8241/mcp` using server-side Cognee environment variables.
+It serves shared memory tools such as `remember`, `recall`, and `forget` using
+server-side Cognee environment variables. Do not stop port `8241` unless you
+first verify it is not the official Cognee MCP runtime.
+
+`app/cognee_mcp_proxy.py` is only a fallback test bridge and defaults to port
+`8242`.
 
 ## 3. Prove live-world awareness
 
@@ -70,7 +76,13 @@ fetched or extracted.
 
 In Personal Brain ask a question that combines remembered context with current information.
 
-AWS Strands orchestrates the reasoning while inference remains local through the OpenAI-compatible vLLM endpoint.
+Expected flow:
+
+**Cognee recall -> safe memory injection -> Strands orchestration -> local or AMD-on-demand Qwen/vLLM -> tool audit**
+
+AWS Strands orchestrates the reasoning while inference remains local or on the
+private AMD route through an OpenAI-compatible vLLM endpoint. Do not infer the
+global AMD route from the Windows localhost process list.
 
 ## 5. Prove action
 
@@ -84,6 +96,17 @@ Expected flow:
 
 The Docker executor must report `executed`; do not present a fallback as live execution.
 
+## 5b. Prove governance
+
+Use **GOVERN** in Judge Mode.
+
+Expected flow:
+
+**Action proposed -> policy check -> human approval required -> NOT_EXECUTED**
+
+This proves the brain can control actions instead of blindly running every tool
+that appears in context.
+
 ## 6. Close
 
-> It doesn't just know my files. It remembers my context, sees what is happening now, decides what matters, acts safely, verifies the result, and learns from what happened.
+> It doesn't just know my files. It remembers my context, sees what is happening now, decides what matters, governs and acts safely, verifies the result, and learns from what happened.

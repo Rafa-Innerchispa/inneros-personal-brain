@@ -8,9 +8,12 @@ from mcp.server.mcpserver import MCPServer
 
 
 server = MCPServer(
-    name="inneros-cognee-memory",
-    title="InnerOS Cognee Shared Memory",
-    description="Local MCP bridge to the InnerOS Personal Brain Cognee Cloud dataset.",
+    name="inneros-cognee-memory-fallback",
+    title="InnerOS Cognee Shared Memory Fallback",
+    description=(
+        "Non-canonical compatibility MCP bridge for local tests only. "
+        "The canonical runtime is inneros-cognee-mcp.service using cognee/cognee-mcp:main."
+    ),
     version="0.1.0",
 )
 
@@ -107,7 +110,7 @@ def main() -> None:
     server.run(
         "streamable-http",
         host=os.getenv("COGNEE_MCP_HOST", "127.0.0.1"),
-        port=int(os.getenv("COGNEE_MCP_PORT", "8241")),
+        port=int(os.getenv("COGNEE_MCP_FALLBACK_PORT", "8242")),
         streamable_http_path=os.getenv("COGNEE_MCP_PATH", "/mcp"),
         stateless_http=True,
     )

@@ -3,194 +3,205 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <meta name="theme-color" content="#030712" />
-  <title>InnerOS Personal Brain — Live Cognitive Cortex</title>
+  <meta name="theme-color" content="#071018" />
+  <title>InnerOS Personal Brain - Cognee Shared Memory</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="aurora aurora-a"></div>
-  <div class="aurora aurora-b"></div>
-  <div class="scanlines"></div>
-
-  <main class="shell">
+  <main class="app-shell">
     <header class="topbar">
-      <div class="brand-block">
-        <div class="event-kicker">BATTLE OF THE PERSONAL BRAINS · SAN FRANCISCO 2026</div>
-        <h1>Inner<span>OS</span> Personal Brain</h1>
-        <p>THIS BRAIN <b>KNOWS ME</b>. THIS BRAIN <b>SEES THE WORLD</b>. THIS BRAIN <b>CAN ACT</b>.</p>
+      <div class="brand">
+        <div class="kicker">BATTLE OF THE PERSONAL BRAINS · LIVE COGNITIVE CORTEX</div>
+        <h1>One Memory. Multiple Agents. Local-First.</h1>
+        <p>InnerOS turns Cognee into the shared memory brain for Codex, Cursor, Antigravity, Strands, Bright Data, Qwen/vLLM and governed Docker actions.</p>
       </div>
-      <div class="system-chip">
+      <div class="status-chip">
         <span class="live-dot"></span>
-        <div><strong>LIVE COGNITIVE CORTEX</strong><small id="systemSummary">checking systems…</small></div>
+        <div>
+          <strong>System Status</strong>
+          <small id="systemSummary">checking live routes...</small>
+        </div>
       </div>
     </header>
 
-    <section class="battle-strip">
-      <div><small>THE CHALLENGE</small><strong>Build a brain. Give it memory. Let it see. Make it act.</strong></div>
-      <div class="battle-flow">
-        <span>DATA</span><i>+</i><span>MEMORY</span><i>+</i><span>REASONING</span><i>+</i><span>TOOLS</span><i>+</i><span>ACTIONS</span>
-      </div>
-    </section>
-
-    <section class="main-grid">
-      <aside class="glass left-rail">
-        <div class="panel-heading">
-          <div><small>CORE BRAIN</small><h2>Technology Regions</h2></div>
-          <span id="coreBadge" class="state-badge">CHECKING</span>
-        </div>
-        <div id="techStack" class="tech-stack"></div>
-
-        <div class="connector-title">
-          <div><small>EXTERNAL NERVOUS SYSTEM</small><h3>Connectors</h3></div>
-          <span class="optional">optional</span>
-        </div>
-        <div id="connectors" class="connector-list"></div>
-        <p class="connector-note">The core brain keeps working even if a connector is unavailable. MCP expands context, it does not own cognition.</p>
-
-        <div class="fabric-title">
-          <div><small>SHARED MEMORY FABRIC</small><h3>Cognee Hub</h3></div>
-          <span id="fabricDataset">dataset</span>
-        </div>
-        <div id="fabricMatrix" class="fabric-matrix"></div>
-      </aside>
-
-      <section class="cortex glass">
-        <div class="cortex-head">
+    <section class="stage-grid">
+      <section class="cortex-panel">
+        <div class="panel-title">
           <div>
-            <span class="eyebrow">LIVE BRAIN MAP</span>
+            <small>LIVE BRAIN MAP</small>
             <h2 id="cognitiveState">COGNITIVE STATE · IDLE</h2>
           </div>
-          <div class="mode-pill" id="modePill">WAITING FOR INPUT</div>
+          <span id="modePill">WAITING FOR INPUT</span>
         </div>
 
-        <div class="brain-scene">
-          <div class="halo h1"></div>
-          <div class="halo h2"></div>
-
-          <svg id="brainSvg" class="brain-svg" viewBox="0 0 920 650" aria-label="Animated cognitive brain">
+        <div class="brain-map">
+          <svg id="brainSvg" viewBox="0 0 1040 660" role="img" aria-label="Two-brain architecture with Cognee shared memory and InnerOS local brain">
             <defs>
-              <filter id="glow"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              <filter id="microGlow"><feGaussianBlur stdDeviation="2.2" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              <linearGradient id="edge" x1="0" x2="1"><stop offset="0" stop-color="#35ffd0"/><stop offset=".48" stop-color="#4fc3ff"/><stop offset="1" stop-color="#b970ff"/></linearGradient>
-              <radialGradient id="coreG"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".22" stop-color="#66e7ff" stop-opacity=".7"/><stop offset="1" stop-color="#66e7ff" stop-opacity="0"/></radialGradient>
+              <filter id="glow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="sharedEdge" x1="0" x2="1"><stop offset="0" stop-color="#45e6be"/><stop offset="1" stop-color="#6aa8ff"/></linearGradient>
+              <linearGradient id="localEdge" x1="0" x2="1"><stop offset="0" stop-color="#ffd26a"/><stop offset="1" stop-color="#ff8f6a"/></linearGradient>
+              <linearGradient id="bridgeEdge" x1="0" x2="1"><stop offset="0" stop-color="#8df0ff"/><stop offset="1" stop-color="#f6d66f"/></linearGradient>
             </defs>
 
-            <path class="brain-shell" d="M214 438C128 422 94 349 123 286C93 219 149 155 223 158C257 98 339 72 400 105C459 63 542 80 578 137C651 123 716 177 716 245C784 281 790 367 735 411C736 489 654 531 586 502C539 565 453 576 398 530C338 569 261 534 247 478C229 469 218 456 214 438Z"/>
-
-            <g id="region-cognee" class="region" data-tech="cognee">
-              <path d="M208 279C190 226 229 177 291 164C339 128 402 139 426 181C434 224 405 266 360 282C310 299 250 299 208 279Z"/>
-              <text x="248" y="205">COGNEE</text><text class="sub" x="248" y="229">GRAPH · MCP · AGENTS</text>
+            <g class="mesh">
+              <path id="flow-brightdata" d="M762 126 C704 168 676 208 642 274" />
+              <path id="flow-cognee" d="M640 320 C545 274 440 270 318 332" />
+              <path id="flow-strands" d="M318 332 C418 384 514 386 646 342" />
+              <path id="flow-local_model" d="M300 374 C402 458 552 462 768 442" />
+              <path id="flow-docker" d="M626 372 C602 448 642 512 760 552" />
+              <path id="flow-learn" d="M772 548 C714 610 545 602 360 468 C278 406 292 354 342 326" />
+              <path id="flow-govern" d="M534 364 C574 404 620 416 686 400" />
             </g>
 
-            <g id="region-brightdata" class="region" data-tech="brightdata">
-              <path d="M430 181C455 135 523 119 576 149C631 149 676 188 675 239C652 276 610 293 559 286C503 279 449 248 430 181Z"/>
-              <text x="515" y="204">BRIGHT DATA</text><text class="sub" x="515" y="228">LIVE PERCEPTION</text>
+            <g id="region-cognee" class="brain-region shared" data-tech="cognee">
+              <path d="M160 344C112 291 122 210 184 164C188 93 263 53 330 81C385 25 482 41 524 111C594 110 651 166 645 236C701 281 699 371 636 413C621 487 542 526 474 493C413 548 313 532 269 461C224 453 183 413 160 344Z" />
+              <text x="262" y="246">COGNEE</text>
+              <text class="sub" x="236" y="278">SHARED MEMORY BRAIN</text>
+              <text class="micro" x="243" y="307">GRAPH · MCP · AGENTS</text>
             </g>
 
-            <g id="region-strands" class="region" data-tech="strands">
-              <path d="M175 293C232 280 302 294 334 333C345 373 315 410 267 424C215 430 160 397 150 351C151 327 159 308 175 293Z"/>
-              <text x="182" y="346">AWS STRANDS</text><text class="sub" x="182" y="370">ORCHESTRATION</text>
+            <g id="region-inneros_mcp" class="brain-region local" data-tech="inneros_mcp">
+              <path d="M690 382C647 340 655 272 707 238C713 181 774 153 828 178C875 139 949 157 977 214C1027 222 1055 280 1030 325C1054 376 1016 438 958 443C924 497 850 509 804 465C759 486 714 463 690 382Z" />
+              <text x="735" y="314">INNEROS / RALPHI</text>
+              <text class="sub" x="763" y="346">LOCAL BRAIN</text>
+              <text class="micro" x="738" y="375">TOOLS · OPS · COORDINATION</text>
             </g>
 
-            <g id="region-local_model" class="region" data-tech="local_model">
-              <path d="M341 293C389 266 447 278 481 312C506 350 492 397 451 426C404 449 349 432 323 391C312 350 320 317 341 293Z"/>
-              <text x="350" y="350">LOCAL LLM</text><text class="sub" x="350" y="374">QWEN / VLLM</text>
+            <g id="region-strands" class="node core-node" data-tech="strands">
+              <circle cx="538" cy="358" r="68" />
+              <text x="538" y="351">STRANDS</text>
+              <text class="sub" x="538" y="375">ORCHESTRATOR</text>
             </g>
 
-            <g id="region-docker" class="region" data-tech="docker">
-              <path d="M497 300C545 272 610 282 646 318C673 359 656 405 617 432C567 452 513 430 487 392C474 355 480 323 497 300Z"/>
-              <text x="526" y="352">DOCKER</text><text class="sub" x="526" y="376">SAFE ACTION</text>
+            <g id="region-brightdata" class="node" data-tech="brightdata">
+              <rect x="700" y="70" width="166" height="72" rx="8" />
+              <text x="783" y="101">BRIGHT DATA</text>
+              <text class="sub" x="783" y="124">SERP / MCP OBSERVE</text>
             </g>
 
-            <g id="region-inneros_mcp" class="region region-bridge" data-tech="inneros_mcp">
-              <path d="M306 430C348 408 397 416 426 452C448 483 431 522 397 542C356 555 316 534 295 503C281 473 287 447 306 430Z"/>
-              <text x="314" y="483">INNEROS</text><text class="sub" x="314" y="507">MCP BRIDGE</text>
+            <g id="region-local_model" class="node" data-tech="local_model">
+              <rect x="708" y="416" width="172" height="74" rx="8" />
+              <text x="794" y="448">QWEN / VLLM</text>
+              <text class="sub" x="794" y="471">LOCAL OR AMD ROUTE</text>
             </g>
 
-            <g class="neural-map">
-              <path id="path-observe" d="M585 250 Q510 290 455 330"/>
-              <path id="path-memory" d="M300 250 Q350 300 408 333"/>
-              <path id="path-reason" d="M255 345 Q340 340 420 340"/>
-              <path id="path-local" d="M420 340 Q490 345 555 360"/>
-              <path id="path-action" d="M550 380 Q510 455 420 490"/>
-              <path id="path-learn" d="M414 490 Q345 390 300 250"/>
-              <path id="path-mcp" d="M365 485 Q385 410 420 340"/>
+            <g id="region-docker" class="node" data-tech="docker">
+              <rect x="678" y="536" width="166" height="72" rx="8" />
+              <text x="761" y="566">DOCKER</text>
+              <text class="sub" x="761" y="589">SAFE ACTION</text>
             </g>
 
-            <g class="particles">
-              <circle class="particle particle-a" r="6"><animateMotion dur="3.4s" repeatCount="indefinite" path="M585 250 Q510 290 455 330"/></circle>
-              <circle class="particle particle-b" r="4"><animateMotion dur="4.1s" repeatCount="indefinite" path="M300 250 Q350 300 408 333"/></circle>
-              <circle class="particle particle-c" r="5"><animateMotion dur="3.7s" repeatCount="indefinite" path="M420 340 Q490 345 555 360"/></circle>
+            <g id="region-govern" class="node policy-node" data-tech="govern">
+              <rect x="602" y="378" width="132" height="52" rx="8" />
+              <text x="668" y="399">GOVERN</text>
+              <text class="sub" x="668" y="418">POLICY GATE</text>
             </g>
 
-            <circle class="core-a" cx="420" cy="340" r="100"/>
-            <circle class="core-b" cx="420" cy="340" r="12"/>
+            <g id="region-bridge" class="bridge" data-tech="bridge">
+              <path d="M370 468 C430 516 602 514 728 438" />
+              <text x="518" y="512">CURATED MEMORY BRIDGE</text>
+              <text class="sub" x="518" y="535">safe seed · provenance · no secrets</text>
+            </g>
           </svg>
 
-          <div class="brain-label">
-            <small id="brainMini">SOVEREIGN · PERSONAL · ACTIONABLE</small>
-            <strong id="brainMain">READY</strong>
-          </div>
-
-          <div class="connector-orbit">
-            <span class="orbit-node n-a">CLAUDE</span>
-            <span class="orbit-node n-b">CODEX</span>
-            <span class="orbit-node n-c">CURSOR</span>
-            <span class="orbit-node n-d">ANTIGRAVITY</span>
-            <span class="orbit-node n-e">RALPHI MCP</span>
-            <span class="orbit-node n-f">GITHUB</span>
-            <span class="orbit-node n-g">GMAIL</span>
+          <div class="agents-strip" aria-label="Shared agent surfaces">
+            <span>CODEX</span>
+            <span>CURSOR</span>
+            <span>ANTIGRAVITY</span>
+            <span>STRANDS</span>
+            <span>GITHUB</span>
+            <span>GMAIL</span>
           </div>
         </div>
 
-        <div class="flow-bar" id="flowBar">
-          <div data-step="observe"><b>1</b><span>OBSERVE<small>Bright Data</small></span></div><i>→</i>
-          <div data-step="remember"><b>2</b><span>REMEMBER<small>Cognee</small></span></div><i>→</i>
-          <div data-step="reason"><b>3</b><span>REASON<small>Strands + Qwen</small></span></div><i>→</i>
-          <div data-step="act"><b>4</b><span>ACT<small>Docker</small></span></div><i>→</i>
-          <div data-step="learn"><b>5</b><span>LEARN<small>Cognee</small></span></div>
+        <div class="pipeline" id="flowBar">
+          <div data-step="remember"><b>1</b><span>REMEMBER<small>Cognee recall</small></span></div>
+          <div data-step="observe"><b>2</b><span>OBSERVE<small>Bright Data</small></span></div>
+          <div data-step="reason"><b>3</b><span>REASON<small>Strands + Qwen</small></span></div>
+          <div data-step="govern"><b>4</b><span>GOVERN<small>policy gate</small></span></div>
+          <div data-step="act"><b>5</b><span>ACT<small>Docker</small></span></div>
+          <div data-step="learn"><b>6</b><span>LEARN<small>Cognee write</small></span></div>
         </div>
       </section>
 
-      <aside class="glass event-panel">
-        <div class="panel-heading">
-          <div><small>REAL-TIME</small><h2>Live Event Stream</h2></div>
-          <span class="record-dot">REC</span>
+      <aside class="command-panel">
+        <div class="panel-title compact">
+          <div>
+            <small>ASK THE BRAIN</small>
+            <h2>Run a real trace</h2>
+          </div>
+        </div>
+        <textarea id="prompt">What do you remember about what I am building, and what should I focus on next?</textarea>
+        <div class="button-row">
+          <button id="thinkBtn" class="primary">Think</button>
+          <button id="actBtn" class="secondary">Think + Act</button>
+        </div>
+        <div class="example-grid">
+          <button data-prompt="What marker proves that Cognee persistent memory is working for InnerOS Personal Brain?">Cognee proof</button>
+          <button data-prompt="What current AI agent memory opportunity should InnerOS focus on for this hackathon?">Bright Data proof</button>
+          <button data-prompt="Use my remembered project context and current public context to prepare the next action.">Full loop</button>
+        </div>
+
+        <div class="judge-box">
+          <div class="panel-title compact">
+            <div>
+              <small>JUDGE MODE</small>
+              <h2>Four proof buttons</h2>
+            </div>
+          </div>
+          <div class="judge-grid">
+            <button data-proof="remember">REMEMBER</button>
+            <button data-proof="observe">OBSERVE</button>
+            <button data-proof="govern">GOVERN</button>
+            <button data-proof="share">SHARE</button>
+          </div>
+        </div>
+
+        <div id="answer" class="answer-box">The backend trace, proof mode evidence, and action result will appear here.</div>
+      </aside>
+    </section>
+
+    <section class="bottom-grid">
+      <section class="matrix-panel">
+        <div class="panel-title compact">
+          <div>
+            <small>SHARED MEMORY FABRIC</small>
+            <h2>Cognee Hub</h2>
+          </div>
+          <span id="fabricDataset">dataset</span>
+        </div>
+        <div id="fabricMatrix" class="fabric-matrix"></div>
+      </section>
+
+      <section class="matrix-panel">
+        <div class="panel-title compact">
+          <div>
+            <small>ROUTE HEALTH</small>
+            <h2>Local + Distributed</h2>
+          </div>
+          <span id="coreBadge">CHECKING</span>
+        </div>
+        <div id="routeMatrix" class="route-matrix"></div>
+      </section>
+
+      <section class="events-panel">
+        <div class="panel-title compact">
+          <div>
+            <small>REAL TIME</small>
+            <h2>Event stream</h2>
+          </div>
+          <span class="rec">REC</span>
         </div>
         <div id="eventStream" class="event-stream">
           <article class="event idle"><span>00</span><div><b>Brain online</b><small>Waiting for a real request</small></div></article>
         </div>
-        <div class="evidence-box">
-          <small>PROOF, NOT THEATER</small>
-          <strong id="evidenceSummary">Every stage below is driven by the backend.</strong>
-          <div id="metrics" class="metrics"><span>MEM 0</span><span>WEB 0</span><span>ACTIONS 0</span></div>
-        </div>
-      </aside>
-    </section>
-
-    <section class="glass command-center">
-      <div class="command-head">
-        <div><small>ASK THE BRAIN</small><h2>Test it with a real question</h2></div>
-        <div class="example-pills">
-          <button data-prompt="What do you know about InnerOS, VoiceOps and Physical Guardian?">Know me</button>
-          <button data-prompt="What AI opportunity in San Francisco is relevant to what I am building?">See the world</button>
-          <button data-prompt="Use what you remember about my projects and current live context to prepare the next action I should take.">Think + act</button>
-        </div>
-      </div>
-      <div class="input-row">
-        <textarea id="prompt">What do you remember about what I am building, and what should I focus on next?</textarea>
-        <div class="command-buttons">
-          <button id="thinkBtn" class="btn btn-think">THINK</button>
-          <button id="actBtn" class="btn btn-act">THINK + ACT</button>
-        </div>
-      </div>
-      <div id="answer" class="answer-box">The answer, evidence and execution result will appear here.</div>
+        <div id="metrics" class="metrics"><span>MEM 0</span><span>WEB 0</span><span>ACTIONS 0</span></div>
+      </section>
     </section>
 
     <footer>
-      <span>InnerOS Cognitive Cortex</span>
-      <strong>OBSERVE → REMEMBER → REASON → ACT → LEARN</strong>
-      <span>Cognee shared memory · Direct agent tools · MCP + plugins</span>
+      <span>Observe -> Remember -> Reason -> Govern/Act -> Verify -> Learn</span>
+      <strong id="evidenceSummary">No secrets in frontend. Fallbacks are labeled.</strong>
     </footer>
   </main>
 
