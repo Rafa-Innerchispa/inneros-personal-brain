@@ -65,7 +65,7 @@ class PersonalBrain:
     def _public_identity_query() -> str:
         return os.getenv(
             "PUBLIC_IDENTITY_SEARCH_QUERY",
-            "Rafael Lopez Ralphi IA InnerChispa PC Doctor InnerOS",
+            '"Rafael Lopez" "InnerChispa" Ralphi IA PC Doctor InnerOS',
         )
 
     @classmethod
