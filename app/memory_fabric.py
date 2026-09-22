@@ -107,7 +107,11 @@ def build_memory_fabric() -> MemoryFabric:
     dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
     cognee_cloud_configured = bool(os.getenv("COGNEE_API_KEY"))
     cognee_cloud_ready = cognee_cloud_configured and os.getenv("COGNEE_LIVE_VERIFIED") == "1"
-    cognee_mcp_ready = _tcp_open("127.0.0.1", int(os.getenv("COGNEE_MCP_PORT", "8241")))
+    cognee_mcp_configured = bool(os.getenv("COGNEE_MCP_URL") or os.getenv("COGNEE_MCP_PORT"))
+    cognee_mcp_ready = cognee_mcp_configured and _tcp_open(
+        "127.0.0.1",
+        int(os.getenv("COGNEE_MCP_PORT", "8241")),
+    )
     cognee_core_ready = cognee_mcp_ready or cognee_cloud_ready
     cognee_transport = "Official local Cognee MCP" if cognee_mcp_ready else "Cognee Cloud HTTP"
     cognee_evidence = (
