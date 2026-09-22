@@ -108,6 +108,13 @@ def build_memory_fabric() -> MemoryFabric:
     cognee_cloud_configured = bool(os.getenv("COGNEE_API_KEY"))
     cognee_cloud_ready = cognee_cloud_configured and os.getenv("COGNEE_LIVE_VERIFIED") == "1"
     cognee_mcp_ready = _tcp_open("127.0.0.1", int(os.getenv("COGNEE_MCP_PORT", "8241")))
+    cognee_core_ready = cognee_mcp_ready or cognee_cloud_ready
+    cognee_transport = "Official local Cognee MCP" if cognee_mcp_ready else "Cognee Cloud HTTP"
+    cognee_evidence = (
+        "COGNEE_MCP_URL points to the official localhost Cognee MCP; cloud is not required for this route"
+        if cognee_mcp_ready
+        else "COGNEE_API_KEY is server-side only; default cloud URL is https://api.cognee.ai"
+    )
     ralphi_ready = _tcp_open("127.0.0.1", int(os.getenv("INNEROS_MCP_PORT", "8102")))
     distributed_ralphi_ready = os.getenv("INNEROS_DISTRIBUTED_RALPHI_VERIFIED", "1") == "1"
     distributed_qwen_state = os.getenv("INNEROS_QWEN_ROUTE_STATE", "on_demand")
@@ -154,20 +161,20 @@ def build_memory_fabric() -> MemoryFabric:
             FabricSurface(
                 key="personal_brain",
                 label="Personal Brain product",
-                transport="Cognee Cloud HTTP",
+                transport=cognee_transport,
                 role="Recall before reasoning and remember verified outcomes",
-                state="ready" if cognee_cloud_ready else "configured" if cognee_cloud_configured else "pending_auth",
+                state="ready" if cognee_core_ready else "configured" if cognee_cloud_configured else "pending_auth",
                 required_for_core=True,
-                evidence="COGNEE_API_KEY is server-side only; default cloud URL is https://api.cognee.ai",
+                evidence=cognee_evidence,
             ),
             FabricSurface(
                 key="strands",
                 label="AWS Strands",
-                transport="direct Cognee agent tools",
+                transport="direct Cognee agent tools via MCP" if cognee_mcp_ready else "direct Cognee agent tools",
                 role="Agent-native recall and durable remember",
-                state="ready" if cognee_cloud_ready else "configured" if cognee_cloud_configured else "pending_auth",
+                state="ready" if cognee_core_ready else "configured" if cognee_cloud_configured else "pending_auth",
                 required_for_core=True,
-                evidence="cognee_recall and cognee_remember use the shared dataset",
+                evidence="cognee_recall and cognee_remember use the shared dataset through the active Cognee route",
             ),
             FabricSurface(
                 key="brightdata",

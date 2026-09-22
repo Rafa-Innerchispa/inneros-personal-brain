@@ -564,7 +564,8 @@ class PersonalBrain:
                     "strands_orchestrator": True,
                     "local_qwen_vllm": True,
                     "cognee_shared_memory": bool(available_memory_hits),
-                    "brightdata_live_web": bool(web_hits),
+                    "brightdata_live_web": bool(web_hits) and not replay,
+                    "brightdata_verified_replay": bool(web_hits) and replay,
                     "docker_sandbox": bool(actions),
                 }.items()
                 if used
@@ -591,6 +592,8 @@ class PersonalBrain:
                 "cognee_dataset": dataset,
                 "brightdata_query": route["web_query"] if route["use_web"] else "",
                 "web_mode": "verified_replay" if replay else "live" if web_hits else "not_used",
+                "brightdata_live_count": len([hit for hit in web_hits if not hit.metadata.get("verified_replay")]),
+                "brightdata_replay_count": len([hit for hit in web_hits if hit.metadata.get("verified_replay")]),
             },
             "routing_reason": route["reason"],
         }

@@ -537,6 +537,8 @@ class BrightDataAdapter:
     async def _search_rest_serp(self, query: str, limit: int) -> list[Evidence]:
         if not self.rest_api_key or not self.rest_zone:
             return []
+        timeout_seconds = float(os.getenv("BRIGHTDATA_SERP_TIMEOUT", "120"))
+        timeout = httpx.Timeout(timeout_seconds, connect=12.0)
         headers = {
             "Authorization": f"Bearer {self.rest_api_key}",
             "Content-Type": "application/json",
@@ -548,7 +550,7 @@ class BrightDataAdapter:
             "format": "json",
             "data_format": "parsed",
         }
-        async with httpx.AsyncClient(timeout=httpx.Timeout(35.0, connect=12.0)) as client:
+        async with httpx.AsyncClient(timeout=timeout) as client:
             response = await client.post(self.rest_endpoint, headers=headers, json=parsed_payload)
             response.raise_for_status()
             data = response.json()
@@ -559,7 +561,7 @@ class BrightDataAdapter:
                 "url": search_url,
                 "format": "raw",
             }
-            async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=12.0)) as client:
+            async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(self.rest_endpoint, headers=headers, json=raw_payload)
                 response.raise_for_status()
                 data = response.json()
