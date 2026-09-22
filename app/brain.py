@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Awaitable, Callable
 
 from app.models import BrainResponse, Evidence
+from app.cognee_agent_tools import CogneeAgentMemoryTools
 from app.sandbox import DockerSandboxExecutor
 
 
@@ -100,7 +101,23 @@ class PersonalBrain:
             "state": "active",
             "message": "Local Qwen/vLLM is synthesizing the answer",
         })
-        answer = await self._reason(prompt, context)
+        reasoned = await self._reason(prompt, context)
+        if isinstance(reasoned, tuple):
+            answer, agent_memory_usage = reasoned
+        else:
+            answer, agent_memory_usage = reasoned, {}
+        if agent_memory_usage.get("direct_agent_tools"):
+            await self._emit(emit, {
+                "stage": "remember",
+                "technology": "cognee",
+                "state": "complete",
+                "message": (
+                    "Cognee is attached directly to the Strands agent "
+                    f"(recall calls: {agent_memory_usage.get('recall_calls', 0)}, "
+                    f"remember calls: {agent_memory_usage.get('remember_calls', 0)})"
+                ),
+                "agent_memory": agent_memory_usage,
+            })
         await self._emit(emit, {
             "stage": "reason",
             "technology": "local_model",
@@ -188,6 +205,9 @@ class PersonalBrain:
                 """Return a harmless marker for OpenAI-compatible tool schemas."""
                 return value
 
+            cognee_agent_memory = CogneeAgentMemoryTools()
+            memory_tools = cognee_agent_memory.build()
+
             model = OpenAIModel(
                 client_args={
                     "api_key": os.getenv("LOCAL_LLM_API_KEY", "local"),
@@ -197,17 +217,21 @@ class PersonalBrain:
                     "LOCAL_LLM_MODEL",
                     "QuantTrio/Qwen3-Coder-30B-A3B-Instruct-AWQ",
                 ),
-                params={"tool_choice": "none"},
             )
             agent = Agent(
                 model=model,
-                tools=[evidence_marker],
+                tools=[evidence_marker, *memory_tools],
                 system_prompt=(
-                    "You are InnerOS Personal Brain. Use memory and live-web evidence. "
-                    "Be concise and distinguish remembered facts from live findings. "
-                    "Historical memories can describe older execution failures; treat those only as historical. "
-                    "Do not predict or describe the outcome of the current action because execution happens "
-                    "after reasoning and the verified executor result will be appended separately."
+                    "You are InnerOS Personal Brain. Cognee is your durable shared memory. "
+                    "When Cognee tools are available, call cognee_recall before answering any question "
+                    "about prior projects, decisions, preferences, architecture, or earlier outcomes. "
+                    "Use cognee_remember only for durable verified facts, explicit remember requests, "
+                    "or verified outcomes; never store credentials or raw untrusted web text. "
+                    "Use the supplied memory and live-web evidence too. Be concise and distinguish "
+                    "remembered facts from live findings. Historical memories can describe older "
+                    "execution failures; treat those only as historical. Do not predict or describe "
+                    "the outcome of the current action because execution happens after reasoning and "
+                    "the verified executor result will be appended separately."
                 ),
             )
             result = agent(
@@ -216,7 +240,7 @@ class PersonalBrain:
                 "Do not state that the current action succeeded or failed.\n\n"
                 f"EVIDENCE:\n{context}"
             )
-            return str(result)
+            return str(result), cognee_agent_memory.usage()
         except Exception as exc:
             if context:
                 return (

@@ -1,5 +1,5 @@
 const techMeta={
-  cognee:{name:'Cognee',role:'Persistent memory + knowledge graph'},
+  cognee:{name:'Cognee',role:'Persistent graph memory + agent memory'},
   brightdata:{name:'Bright Data',role:'Live web perception'},
   strands:{name:'AWS Strands',role:'Reasoning orchestration'},
   local_model:{name:'Local Qwen / vLLM',role:'Sovereign inference'},
@@ -8,6 +8,8 @@ const techMeta={
 };
 
 const connectorMeta=[
+  ['cognee_agent_memory','Cognee ↔ Strands','Direct shared memory tools'],
+  ['cognee_mcp','Cognee MCP','Shared memory for external agents'],
   ['inneros_mcp','Ralphi MCP','System memory + tools'],
   ['github','GitHub','Projects + code'],
   ['gmail','Gmail','Messages + signals'],
@@ -38,9 +40,24 @@ function renderStatus(s){
   $('systemSummary').textContent=coreReady?'core brain operational':'partial readiness';
 
   const mcp=(s.inneros_mcp||{}).state||'bridge_pending';
+  const agentMemory=(s.cognee_agent_memory||{}).state||'dependency_pending';
+  const cogneeMcp=((s.connectors||{}).cognee_mcp_surface)||'not_reported';
   $('connectors').innerHTML=connectorMeta.map(([key,name,role])=>{
-    const live=key==='inneros_mcp'?(mcp==='connected'):(mcp==='connected');
-    const state=live?'available':'optional';
+    let live=false;
+    let state='optional';
+    if(key==='cognee_agent_memory'){
+      live=agentMemory==='ready';
+      state=live?'DIRECT':'pending';
+    }else if(key==='cognee_mcp'){
+      live=cogneeMcp==='registered_platform_capability';
+      state=live?'REGISTERED':'optional';
+    }else if(key==='inneros_mcp'){
+      live=mcp==='connected';
+      state=live?'available':'optional';
+    }else{
+      live=mcp==='connected';
+      state=live?'via MCP':'optional';
+    }
     return '<div class="connector '+(live?'connected':'degraded')+'"><b>'+name+'</b><span>'+role+' · '+state+'</span></div>';
   }).join('');
 

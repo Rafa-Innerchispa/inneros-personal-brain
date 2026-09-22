@@ -4,6 +4,7 @@ import pytest
 
 from app.adapters import DemoMemoryAdapter
 from app.brain import PersonalBrain
+from app.cognee_agent_tools import CogneeAgentMemoryTools
 
 
 class NoWeb:
@@ -63,3 +64,23 @@ def test_live_cortex_static_assets_exist():
     assert "BATTLE OF THE PERSONAL BRAINS" in html
     assert "LIVE COGNITIVE CORTEX" in html
     assert "EXTERNAL NERVOUS SYSTEM" in html
+
+
+def test_cognee_agent_memory_tools_fail_closed_without_credentials(monkeypatch):
+    monkeypatch.delenv("COGNEE_SERVICE_URL", raising=False)
+    monkeypatch.delenv("COGNEE_API_KEY", raising=False)
+    tools = CogneeAgentMemoryTools()
+    assert tools.ready is False
+    assert tools.build() == []
+    assert tools.usage()["direct_agent_tools"] is True
+
+
+def test_live_cortex_explains_shared_agent_memory():
+    html = Path("app/static/index.html").read_text(encoding="utf-8")
+    js = Path("app/static/app.js").read_text(encoding="utf-8")
+    assert "GRAPH · MCP · AGENTS" in html
+    assert "CLAUDE" in html
+    assert "CODEX" in html
+    assert "ANTIGRAVITY" in html
+    assert "Cognee ↔ Strands" in js
+    assert "Cognee MCP" in js
