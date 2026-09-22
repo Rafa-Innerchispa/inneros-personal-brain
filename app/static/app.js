@@ -145,10 +145,10 @@ async function loadStatus() {
 }
 
 function clearAnimation() {
-  document.querySelectorAll(".brain-region,.node,.bridge").forEach((item) => {
+  document.querySelectorAll(".brain-segment,.bridge-segment").forEach((item) => {
     item.classList.remove("active", "complete", "error");
   });
-  document.querySelectorAll(".mesh path").forEach((item) => item.classList.remove("flowing"));
+  document.querySelectorAll(".flow-rails path").forEach((item) => item.classList.remove("flowing"));
   document.querySelectorAll(".pipeline [data-step]").forEach((item) => item.classList.remove("active"));
 }
 
@@ -159,10 +159,10 @@ function activateStage(stage, technology, state, message) {
   const flow = $(meta.flow || "flow-strands");
   const step = document.querySelector(`[data-step="${stage}"]`);
 
-  document.querySelectorAll(".brain-region,.node,.bridge").forEach((item) => {
+  document.querySelectorAll(".brain-segment,.bridge-segment").forEach((item) => {
     item.classList.remove("active", "error");
   });
-  document.querySelectorAll(".mesh path").forEach((item) => item.classList.remove("flowing"));
+  document.querySelectorAll(".flow-rails path").forEach((item) => item.classList.remove("flowing"));
   document.querySelectorAll(".pipeline [data-step]").forEach((item) => item.classList.remove("active"));
 
   if (region) {

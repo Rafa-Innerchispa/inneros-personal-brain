@@ -35,74 +35,117 @@
         </div>
 
         <div class="brain-map">
-          <svg id="brainSvg" viewBox="0 0 1040 660" role="img" aria-label="Two-brain architecture with Cognee shared memory and InnerOS local brain">
+          <svg id="brainSvg" viewBox="0 0 1120 680" role="img" aria-label="Principal brain with colored functional segments for Cognee memory, InnerOS coordination, Strands orchestration, Bright Data observation, Qwen reasoning, governance and Docker action">
             <defs>
-              <filter id="glow"><feGaussianBlur stdDeviation="7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-              <linearGradient id="sharedEdge" x1="0" x2="1"><stop offset="0" stop-color="#45e6be"/><stop offset="1" stop-color="#6aa8ff"/></linearGradient>
-              <linearGradient id="localEdge" x1="0" x2="1"><stop offset="0" stop-color="#ffd26a"/><stop offset="1" stop-color="#ff8f6a"/></linearGradient>
-              <linearGradient id="bridgeEdge" x1="0" x2="1"><stop offset="0" stop-color="#8df0ff"/><stop offset="1" stop-color="#f6d66f"/></linearGradient>
+              <filter id="softGlow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <filter id="hardGlow"><feGaussianBlur stdDeviation="9" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+              <linearGradient id="brainShell" x1="0" x2="1"><stop offset="0" stop-color="#5fe3ff"/><stop offset=".55" stop-color="#6ee79a"/><stop offset="1" stop-color="#ffd26a"/></linearGradient>
+              <linearGradient id="memoryFill" x1="0" x2="1"><stop offset="0" stop-color="#1ab7d7"/><stop offset="1" stop-color="#44e3bd"/></linearGradient>
+              <linearGradient id="localFill" x1="0" x2="1"><stop offset="0" stop-color="#f2c15f"/><stop offset="1" stop-color="#ff8f6f"/></linearGradient>
+              <linearGradient id="strandsFill" x1="0" x2="1"><stop offset="0" stop-color="#9d88ff"/><stop offset="1" stop-color="#66b7ff"/></linearGradient>
+              <linearGradient id="observeFill" x1="0" x2="1"><stop offset="0" stop-color="#57c7ff"/><stop offset="1" stop-color="#2583ff"/></linearGradient>
+              <linearGradient id="reasonFill" x1="0" x2="1"><stop offset="0" stop-color="#5b79ff"/><stop offset="1" stop-color="#aa72ff"/></linearGradient>
+              <linearGradient id="actionFill" x1="0" x2="1"><stop offset="0" stop-color="#ff8f6f"/><stop offset="1" stop-color="#6ee79a"/></linearGradient>
+              <linearGradient id="bridgeFill" x1="0" x2="1"><stop offset="0" stop-color="#ffe38a"/><stop offset=".55" stop-color="#78efe2"/><stop offset="1" stop-color="#8ebcff"/></linearGradient>
             </defs>
 
-            <g class="mesh">
-              <path id="flow-brightdata" d="M762 126 C704 168 676 208 642 274" />
-              <path id="flow-cognee" d="M640 320 C545 274 440 270 318 332" />
-              <path id="flow-strands" d="M318 332 C418 384 514 386 646 342" />
-              <path id="flow-local_model" d="M300 374 C402 458 552 462 768 442" />
-              <path id="flow-docker" d="M626 372 C602 448 642 512 760 552" />
-              <path id="flow-learn" d="M772 548 C714 610 545 602 360 468 C278 406 292 354 342 326" />
-              <path id="flow-govern" d="M534 364 C574 404 620 416 686 400" />
+            <g class="brain-backdrop">
+              <path class="brain-main-shell" d="M139 391C80 328 91 232 164 181C174 96 269 47 350 84C418 18 536 31 596 112C684 94 767 143 793 226C882 246 931 337 900 417C936 501 858 595 759 578C695 647 577 648 514 586C438 631 331 598 293 510C225 511 165 466 139 391Z" />
+              <path class="brain-fold f1" d="M210 218C282 180 355 190 408 246" />
+              <path class="brain-fold f2" d="M482 134C532 185 536 240 499 296" />
+              <path class="brain-fold f3" d="M652 199C606 244 601 298 654 343" />
+              <path class="brain-fold f4" d="M244 414C329 386 407 407 468 471" />
+              <path class="brain-fold f5" d="M598 454C669 428 737 452 778 512" />
             </g>
 
-            <g id="region-cognee" class="brain-region shared" data-tech="cognee">
-              <path d="M160 344C112 291 122 210 184 164C188 93 263 53 330 81C385 25 482 41 524 111C594 110 651 166 645 236C701 281 699 371 636 413C621 487 542 526 474 493C413 548 313 532 269 461C224 453 183 413 160 344Z" />
-              <text x="262" y="246">COGNEE</text>
-              <text class="sub" x="236" y="278">SHARED MEMORY BRAIN</text>
-              <text class="micro" x="243" y="307">GRAPH · MCP · AGENTS</text>
+            <g class="flow-rails">
+              <path id="flow-brightdata" d="M727 167 C660 206 623 244 594 286" />
+              <path id="flow-cognee" d="M348 323 C400 307 454 306 514 326" />
+              <path id="flow-strands" d="M529 346 C558 335 586 335 616 347" />
+              <path id="flow-local_model" d="M645 366 C694 363 746 382 789 421" />
+              <path id="flow-govern" d="M611 414 C616 461 649 493 704 511" />
+              <path id="flow-docker" d="M704 511 C733 527 764 544 798 564" />
+              <path id="flow-learn" d="M764 545 C641 625 421 593 342 458 C315 411 316 367 348 323" />
             </g>
 
-            <g id="region-inneros_mcp" class="brain-region local" data-tech="inneros_mcp">
-              <path d="M690 382C647 340 655 272 707 238C713 181 774 153 828 178C875 139 949 157 977 214C1027 222 1055 280 1030 325C1054 376 1016 438 958 443C924 497 850 509 804 465C759 486 714 463 690 382Z" />
-              <text x="735" y="314">INNEROS / RALPHI</text>
-              <text class="sub" x="763" y="346">LOCAL BRAIN</text>
-              <text class="micro" x="738" y="375">TOOLS · OPS · COORDINATION</text>
+            <g id="region-cognee" class="brain-segment memory-segment" data-tech="cognee">
+              <path d="M312 250C356 198 455 202 497 257C536 308 511 401 443 423C381 443 306 400 294 333C289 301 296 273 312 250Z" />
+              <circle cx="399" cy="333" r="58" />
+              <text x="399" y="304">COGNEE</text>
+              <text class="sub" x="399" y="329">MEMORY CORE</text>
+              <text class="micro" x="399" y="355">GRAPH · MCP · AGENTS</text>
             </g>
 
-            <g id="region-strands" class="node core-node" data-tech="strands">
-              <circle cx="538" cy="358" r="68" />
-              <text x="538" y="351">STRANDS</text>
-              <text class="sub" x="538" y="375">ORCHESTRATOR</text>
+            <g id="region-inneros_mcp" class="brain-segment local-segment" data-tech="inneros_mcp">
+              <path d="M179 284C185 221 246 176 315 190C280 245 276 306 296 364C264 399 220 407 188 378C163 355 159 319 179 284Z" />
+              <text x="236" y="278">INNEROS / RALPHI</text>
+              <text class="sub" x="236" y="303">LOCAL BRAIN</text>
+              <text class="micro" x="236" y="328">TOOLS · OPS</text>
             </g>
 
-            <g id="region-brightdata" class="node" data-tech="brightdata">
-              <rect x="700" y="70" width="166" height="72" rx="8" />
-              <text x="783" y="101">BRIGHT DATA</text>
-              <text class="sub" x="783" y="124">SERP / MCP OBSERVE</text>
+            <g id="region-brightdata" class="brain-segment observe-segment" data-tech="brightdata">
+              <path d="M612 144C690 122 768 169 785 244C733 236 683 250 642 286C606 253 594 193 612 144Z" />
+              <text x="700" y="198">BRIGHT DATA</text>
+              <text class="sub" x="700" y="224">OBSERVE</text>
+              <text class="micro" x="700" y="249">SERP · MCP</text>
             </g>
 
-            <g id="region-local_model" class="node" data-tech="local_model">
-              <rect x="708" y="416" width="172" height="74" rx="8" />
-              <text x="794" y="448">QWEN / VLLM</text>
-              <text class="sub" x="794" y="471">LOCAL OR AMD ROUTE</text>
+            <g id="region-strands" class="brain-segment strands-segment" data-tech="strands">
+              <path d="M494 285C548 250 624 269 651 326C675 379 639 445 579 453C522 459 474 413 477 355C478 324 483 303 494 285Z" />
+              <circle cx="565" cy="356" r="36" />
+              <text x="565" y="342">STRANDS</text>
+              <text class="sub" x="565" y="367">CONTROL</text>
+              <text class="micro" x="565" y="390">TOOLS · AUDIT</text>
             </g>
 
-            <g id="region-docker" class="node" data-tech="docker">
-              <rect x="678" y="536" width="166" height="72" rx="8" />
-              <text x="761" y="566">DOCKER</text>
-              <text class="sub" x="761" y="589">SAFE ACTION</text>
+            <g id="region-local_model" class="brain-segment reason-segment" data-tech="local_model">
+              <path d="M657 305C714 263 800 292 824 362C845 424 799 492 731 493C684 493 649 462 637 416C629 376 637 335 657 305Z" />
+              <text x="738" y="375">QWEN / VLLM</text>
+              <text class="sub" x="738" y="401">REASONING</text>
+              <text class="micro" x="738" y="426">LOCAL · AMD ROUTE</text>
             </g>
 
-            <g id="region-govern" class="node policy-node" data-tech="govern">
-              <rect x="602" y="378" width="132" height="52" rx="8" />
-              <text x="668" y="399">GOVERN</text>
-              <text class="sub" x="668" y="418">POLICY GATE</text>
+            <g id="region-govern" class="brain-segment govern-segment" data-tech="govern">
+              <path d="M510 456C552 437 612 452 636 495C610 542 548 558 503 524C481 504 483 471 510 456Z" />
+              <text x="565" y="491">GOVERN</text>
+              <text class="sub" x="565" y="515">POLICY GATE</text>
             </g>
 
-            <g id="region-bridge" class="bridge" data-tech="bridge">
-              <path d="M370 468 C430 516 602 514 728 438" />
-              <text x="518" y="512">CURATED MEMORY BRIDGE</text>
-              <text class="sub" x="518" y="535">safe seed · provenance · no secrets</text>
+            <g id="region-docker" class="brain-segment action-segment" data-tech="docker">
+              <path d="M642 500C688 482 764 504 796 557C750 599 667 596 624 546C612 527 619 510 642 500Z" />
+              <text x="711" y="539">DOCKER</text>
+              <text class="sub" x="711" y="563">SAFE ACTION</text>
+            </g>
+
+            <g id="region-bridge" class="bridge-segment" data-tech="bridge">
+              <path d="M276 421C350 488 509 500 633 456" />
+              <path class="bridge-track" d="M280 443C364 527 538 536 690 474" />
+              <text x="493" y="549">CURATED MEMORY BRIDGE</text>
+              <text class="sub" x="493" y="572">safe facts · provenance · no secrets</text>
+            </g>
+
+            <g class="outer-connectors">
+              <rect x="918" y="140" width="156" height="46" rx="8" />
+              <text x="996" y="168">PUBLIC WEB</text>
+              <path d="M918 164 C865 168 813 187 777 221" />
+
+              <rect x="920" y="326" width="156" height="46" rx="8" />
+              <text x="998" y="354">AGENTS</text>
+              <path d="M920 350 C834 374 720 370 602 358" />
+
+              <rect x="920" y="520" width="156" height="46" rx="8" />
+              <text x="998" y="548">ACTIONS</text>
+              <path d="M920 544 C856 557 820 563 789 563" />
             </g>
           </svg>
+
+          <div class="brain-legend" aria-label="Brain segment legend">
+            <span class="legend-memory">Cognee memory</span>
+            <span class="legend-local">InnerOS local</span>
+            <span class="legend-observe">Bright Data</span>
+            <span class="legend-reason">Qwen/vLLM</span>
+            <span class="legend-action">Govern + Docker</span>
+          </div>
 
           <div class="agents-strip" aria-label="Shared agent surfaces">
             <span>CODEX</span>

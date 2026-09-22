@@ -191,7 +191,7 @@ h1 {
 
 .brain-map {
   position: relative;
-  min-height: 540px;
+  min-height: 570px;
   margin-top: 8px;
   border: 1px solid rgba(63, 107, 130, 0.42);
   border-radius: 8px;
@@ -215,80 +215,152 @@ h1 {
   position: relative;
   z-index: 1;
   width: 100%;
-  height: 500px;
+  height: 528px;
   display: block;
 }
 
-.mesh path {
-  fill: none;
-  stroke: rgba(142, 188, 211, 0.32);
-  stroke-width: 2;
-  stroke-dasharray: 9 9;
+.brain-backdrop {
+  opacity: 0.98;
 }
 
-.mesh path.flowing {
+.brain-main-shell {
+  fill: rgba(9, 20, 31, 0.9);
+  stroke: url(#brainShell);
+  stroke-width: 4;
+  filter: url(#softGlow);
+}
+
+.brain-fold {
+  fill: none;
+  stroke: rgba(210, 237, 246, 0.18);
+  stroke-width: 2;
+  stroke-linecap: round;
+}
+
+.flow-rails path {
+  fill: none;
+  stroke: rgba(196, 222, 231, 0.28);
+  stroke-width: 2;
+  stroke-dasharray: 6 10;
+  stroke-linecap: round;
+}
+
+.flow-rails path.flowing {
   stroke: var(--teal);
   stroke-width: 4;
-  filter: url(#glow);
+  filter: url(#hardGlow);
   animation: dash 0.85s linear infinite;
 }
 
-.brain-region path {
-  fill: rgba(16, 34, 48, 0.92);
+.brain-segment path,
+.brain-segment circle {
   stroke-width: 3;
+  stroke: rgba(236, 244, 248, 0.35);
   transition: 0.2s ease;
 }
 
-.brain-region.shared path {
-  stroke: url(#sharedEdge);
+.brain-segment path {
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.22));
 }
 
-.brain-region.local path {
-  stroke: url(#localEdge);
+.memory-segment path {
+  fill: rgba(27, 183, 215, 0.7);
+  stroke: #66f3df;
 }
 
-.node rect,
-.node circle {
-  fill: #102334;
-  stroke: #4a718a;
-  stroke-width: 2;
-  transition: 0.2s ease;
+.memory-segment circle {
+  fill: rgba(7, 19, 30, 0.72);
+  stroke: rgba(236, 244, 248, 0.45);
 }
 
-.policy-node rect {
-  fill: #202233;
-  stroke: #9c85d8;
+.local-segment path {
+  fill: rgba(242, 193, 95, 0.72);
+  stroke: #ffd26a;
 }
 
-.bridge path {
+.observe-segment path {
+  fill: rgba(87, 199, 255, 0.68);
+  stroke: #86dbff;
+}
+
+.strands-segment path {
+  fill: rgba(157, 136, 255, 0.66);
+  stroke: #c7bcff;
+}
+
+.strands-segment circle {
+  fill: rgba(10, 21, 36, 0.75);
+  stroke: rgba(236, 244, 248, 0.46);
+}
+
+.reason-segment path {
+  fill: rgba(91, 121, 255, 0.68);
+  stroke: #b499ff;
+}
+
+.govern-segment path {
+  fill: rgba(170, 114, 255, 0.68);
+  stroke: #d0b8ff;
+}
+
+.action-segment path {
+  fill: rgba(255, 143, 111, 0.72);
+  stroke: #ffc0a8;
+}
+
+.bridge-segment path {
   fill: none;
-  stroke: url(#bridgeEdge);
+  stroke: url(#bridgeFill);
   stroke-width: 4;
-  stroke-dasharray: 5 7;
-  filter: url(#glow);
+  stroke-linecap: round;
+  filter: url(#softGlow);
 }
 
-.brain-region text,
-.node text,
-.bridge text {
+.bridge-segment .bridge-track {
+  stroke-width: 2;
+  stroke-dasharray: 5 8;
+  opacity: 0.72;
+}
+
+.brain-segment text,
+.bridge-segment text,
+.outer-connectors text {
   fill: var(--text);
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 850;
   text-anchor: middle;
+  pointer-events: none;
 }
 
-.brain-region .sub,
-.node .sub,
-.bridge .sub {
+.brain-segment .sub,
+.bridge-segment .sub {
   fill: #bdd0db;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
 }
 
-.brain-region .micro {
-  fill: var(--teal);
-  font-size: 11px;
+.brain-segment .micro {
+  fill: rgba(236, 244, 248, 0.82);
+  font-size: 10px;
   font-weight: 800;
+}
+
+.outer-connectors rect {
+  fill: rgba(7, 16, 24, 0.88);
+  stroke: rgba(142, 188, 211, 0.35);
+  stroke-width: 1.5;
+}
+
+.outer-connectors path {
+  fill: none;
+  stroke: rgba(142, 188, 211, 0.42);
+  stroke-width: 1.8;
+  stroke-dasharray: 4 7;
+}
+
+.outer-connectors text {
+  fill: #d7e6ed;
+  font-size: 12px;
 }
 
 .ready path,
@@ -316,14 +388,65 @@ h1 {
 .active rect,
 .active circle {
   stroke: var(--blue);
-  filter: url(#glow);
+  filter: url(#hardGlow);
 }
 
 .complete path,
 .complete rect,
 .complete circle {
   stroke: var(--green);
-  filter: url(#glow);
+  filter: url(#softGlow);
+}
+
+.brain-legend {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  max-width: 720px;
+}
+
+.brain-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border: 1px solid rgba(142, 188, 211, 0.28);
+  border-radius: 8px;
+  background: rgba(7, 16, 24, 0.82);
+  color: #d6e5eb;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.brain-legend span:before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+}
+
+.legend-memory:before {
+  background: #44e3bd;
+}
+
+.legend-local:before {
+  background: #ffd26a;
+}
+
+.legend-observe:before {
+  background: #57c7ff;
+}
+
+.legend-reason:before {
+  background: #8d7aff;
+}
+
+.legend-action:before {
+  background: #ff8f6f;
 }
 
 .agents-strip {
@@ -706,13 +829,19 @@ footer strong {
   }
 
   .brain-map {
-    min-height: 410px;
+    min-height: 430px;
   }
 
   #brainSvg {
-    height: 370px;
-    width: 1120px;
-    transform: translateX(-80px);
+    height: 385px;
+    width: 1180px;
+    transform: translateX(-150px);
+  }
+
+  .brain-legend {
+    position: static;
+    padding: 10px;
+    max-width: none;
   }
 
   .agents-strip,
