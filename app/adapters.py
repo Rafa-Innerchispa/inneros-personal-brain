@@ -111,28 +111,42 @@ class CogneeCloudMemoryAdapter:
             "only_context": True,
             "verbose": True,
         }
-        async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(
-                f"{self.base}/api/v1/recall",
-                headers=self._headers(),
-                json=payload,
-            )
-            if response.status_code == 422:
-                legacy_payload = {
-                    "searchType": None,
-                    "datasets": [self.dataset],
-                    "query": query,
-                    "topK": max(1, min(limit, 20)),
-                    "onlyContext": True,
-                    "verbose": True,
-                }
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
                 response = await client.post(
                     f"{self.base}/api/v1/recall",
                     headers=self._headers(),
-                    json=legacy_payload,
+                    json=payload,
                 )
-            response.raise_for_status()
-            rows = response.json()
+                if response.status_code == 422:
+                    legacy_payload = {
+                        "searchType": None,
+                        "datasets": [self.dataset],
+                        "query": query,
+                        "topK": max(1, min(limit, 20)),
+                        "onlyContext": True,
+                        "verbose": True,
+                    }
+                    response = await client.post(
+                        f"{self.base}/api/v1/recall",
+                        headers=self._headers(),
+                        json=legacy_payload,
+                    )
+                response.raise_for_status()
+                rows = response.json()
+        except (httpx.HTTPError, ValueError) as exc:
+            return [
+                Evidence(
+                    source="cognee",
+                    summary="Cognee recall was temporarily unavailable; continuing with other live sources.",
+                    metadata={
+                        "dataset": self.dataset,
+                        "live": False,
+                        "unavailable": True,
+                        "error_type": type(exc).__name__,
+                    },
+                )
+            ]
         if not isinstance(rows, list):
             rows = [rows]
         return [
