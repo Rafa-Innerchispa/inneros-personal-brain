@@ -231,13 +231,7 @@ h1 {
 }
 
 .cortex-labels {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 528px;
-  z-index: 2;
-  pointer-events: none;
+  display: none;
 }
 
 .cortex-chip {

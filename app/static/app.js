@@ -45,14 +45,14 @@ let stageTimer = null;
 let cortex = null;
 
 const cortexNodes = {
-  inneros_mcp: { x: 0.19, y: 0.52, color: "#e7c268", label: "InnerOS" },
-  local_model: { x: 0.31, y: 0.32, color: "#9c8cff", label: "Qwen" },
-  govern: { x: 0.30, y: 0.70, color: "#e7c268", label: "Govern" },
-  docker: { x: 0.43, y: 0.76, color: "#e98973", label: "Docker" },
-  strands: { x: 0.50, y: 0.49, color: "#80c7ff", label: "Strands" },
-  cognee: { x: 0.69, y: 0.52, color: "#67e6d2", label: "Cognee" },
-  brightdata: { x: 0.84, y: 0.27, color: "#57c7ff", label: "Bright Data" },
-  bridge: { x: 0.50, y: 0.88, color: "#8de6a5", label: "Bridge" },
+  inneros_mcp: { x: 0.20, y: 0.51, color: "#d6b46a", label: "InnerOS" },
+  local_model: { x: 0.30, y: 0.34, color: "#aeb8c8", label: "Qwen" },
+  govern: { x: 0.29, y: 0.67, color: "#8ba7bd", label: "Govern" },
+  docker: { x: 0.40, y: 0.73, color: "#c58266", label: "Docker" },
+  strands: { x: 0.50, y: 0.50, color: "#7bb7d8", label: "Strands" },
+  cognee: { x: 0.70, y: 0.52, color: "#62c8b8", label: "Cognee" },
+  brightdata: { x: 0.80, y: 0.31, color: "#66a9d6", label: "Bright Data" },
+  bridge: { x: 0.50, y: 0.82, color: "#b7c48c", label: "Bridge" },
 };
 
 const cortexFlows = {
@@ -64,6 +64,77 @@ const cortexFlows = {
   docker: ["govern", "docker"],
   bridge: ["cognee", "bridge"],
   inneros_mcp: ["inneros_mcp", "strands"],
+};
+
+const cortexPieces = {
+  local: [
+    {
+      key: "local_model",
+      label: ["QWEN", "VLLM"],
+      fill: ["rgba(174, 184, 200, 0.92)", "rgba(88, 104, 126, 0.74)"],
+      text: "#f4f7f8",
+      points: [[-0.70, -0.60], [-0.12, -0.76], [0.18, -0.38], [0.00, -0.02], [-0.52, 0.04], [-0.82, -0.24]],
+      labelAt: [-0.36, -0.33],
+    },
+    {
+      key: "inneros_mcp",
+      label: ["INNEROS", "RALPHI"],
+      fill: ["rgba(205, 173, 106, 0.94)", "rgba(115, 87, 54, 0.76)"],
+      text: "#fff7dc",
+      points: [[-0.86, -0.15], [-0.50, 0.02], [0.02, 0.02], [0.12, 0.48], [-0.42, 0.62], [-0.86, 0.36]],
+      labelAt: [-0.43, 0.25],
+    },
+    {
+      key: "govern",
+      label: ["GOVERN", "POLICY"],
+      fill: ["rgba(139, 167, 189, 0.90)", "rgba(48, 67, 86, 0.78)"],
+      text: "#ecf6ff",
+      points: [[0.03, 0.04], [0.46, 0.10], [0.57, 0.48], [0.18, 0.76], [-0.20, 0.56], [-0.08, 0.18]],
+      labelAt: [0.18, 0.42],
+    },
+    {
+      key: "docker",
+      label: ["DOCKER", "ACTION"],
+      fill: ["rgba(197, 130, 102, 0.92)", "rgba(90, 58, 52, 0.78)"],
+      text: "#fff0e8",
+      points: [[0.20, -0.06], [0.70, -0.04], [0.83, 0.34], [0.62, 0.64], [0.22, 0.72], [0.52, 0.24]],
+      labelAt: [0.53, 0.31],
+    },
+  ],
+  shared: [
+    {
+      key: "brightdata",
+      label: ["BRIGHT", "DATA"],
+      fill: ["rgba(102, 169, 214, 0.92)", "rgba(42, 86, 118, 0.76)"],
+      text: "#edf8ff",
+      points: [[-0.62, -0.62], [-0.05, -0.82], [0.48, -0.54], [0.38, -0.12], [-0.10, 0.04], [-0.70, -0.16]],
+      labelAt: [-0.12, -0.36],
+    },
+    {
+      key: "cognee",
+      label: ["COGNEE", "GRAPH"],
+      fill: ["rgba(98, 200, 184, 0.94)", "rgba(34, 102, 94, 0.78)"],
+      text: "#e9fffb",
+      points: [[-0.72, -0.10], [-0.08, 0.06], [0.12, 0.54], [-0.30, 0.82], [-0.82, 0.46], [-0.88, 0.10]],
+      labelAt: [-0.39, 0.27],
+    },
+    {
+      key: "strands",
+      label: ["STRANDS", "ROUTER"],
+      fill: ["rgba(123, 183, 216, 0.92)", "rgba(45, 86, 110, 0.78)"],
+      text: "#f0fbff",
+      points: [[0.00, 0.02], [0.44, -0.08], [0.78, 0.18], [0.66, 0.58], [0.16, 0.70], [0.00, 0.46]],
+      labelAt: [0.35, 0.30],
+    },
+    {
+      key: "bridge",
+      label: ["SYNC", "BRIDGE"],
+      fill: ["rgba(183, 196, 140, 0.90)", "rgba(76, 88, 62, 0.72)"],
+      text: "#fbffe9",
+      points: [[0.38, -0.44], [0.82, -0.18], [0.88, 0.18], [0.68, 0.48], [0.46, 0.08]],
+      labelAt: [0.63, -0.03],
+    },
+  ],
 };
 
 function $(id) {
@@ -137,49 +208,137 @@ function spawnFlow(tech, count = 7) {
   }
 }
 
-function drawBlob(ctx, cx, cy, rx, ry, palette, active, label) {
-  ctx.save();
-  const wobble = (performance.now() - cortex.startedAt) / 1000;
-  const glow = active ? 0.95 : 0.34;
-  const shell = ctx.createRadialGradient(cx - rx * 0.35, cy - ry * 0.45, 8, cx, cy, rx * 1.14);
-  shell.addColorStop(0, palette.hot);
-  shell.addColorStop(0.38, palette.mid);
-  shell.addColorStop(1, palette.dark);
-  ctx.shadowColor = palette.hot;
-  ctx.shadowBlur = active ? 34 : 15;
+function brainPath(ctx, cx, cy, rx, ry) {
   ctx.beginPath();
-  for (let i = 0; i <= 96; i += 1) {
-    const a = (Math.PI * 2 * i) / 96;
-    const folded = 1 + Math.sin(a * 5 + wobble * 0.9) * 0.035 + Math.cos(a * 3 - wobble * 0.45) * 0.04;
-    const x = cx + Math.cos(a) * rx * folded;
-    const y = cy + Math.sin(a) * ry * (1 + Math.cos(a * 4) * 0.035);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
+  ctx.moveTo(cx - rx * 0.86, cy + ry * 0.18);
+  ctx.bezierCurveTo(cx - rx * 1.00, cy - ry * 0.22, cx - rx * 0.72, cy - ry * 0.58, cx - rx * 0.43, cy - ry * 0.54);
+  ctx.bezierCurveTo(cx - rx * 0.30, cy - ry * 0.88, cx + rx * 0.18, cy - ry * 0.88, cx + rx * 0.34, cy - ry * 0.58);
+  ctx.bezierCurveTo(cx + rx * 0.74, cy - ry * 0.64, cx + rx * 0.98, cy - ry * 0.28, cx + rx * 0.88, cy + ry * 0.06);
+  ctx.bezierCurveTo(cx + rx * 1.05, cy + ry * 0.28, cx + rx * 0.82, cy + ry * 0.72, cx + rx * 0.42, cy + ry * 0.70);
+  ctx.bezierCurveTo(cx + rx * 0.18, cy + ry * 0.94, cx - rx * 0.26, cy + ry * 0.86, cx - rx * 0.42, cy + ry * 0.62);
+  ctx.bezierCurveTo(cx - rx * 0.76, cy + ry * 0.70, cx - rx * 1.02, cy + ry * 0.48, cx - rx * 0.86, cy + ry * 0.18);
   ctx.closePath();
-  ctx.fillStyle = shell;
-  ctx.globalAlpha = 0.9;
+}
+
+function piecePath(ctx, brain, points, time) {
+  const { cx, cy, rx, ry } = brain;
+  const scale = (point, index) => {
+    const jitter = Math.sin(time * 0.7 + index * 1.9) * 0.01;
+    return {
+      x: cx + (point[0] + jitter) * rx,
+      y: cy + (point[1] + jitter * 0.6) * ry,
+    };
+  };
+  const first = scale(points[0], 0);
+  ctx.beginPath();
+  ctx.moveTo(first.x, first.y);
+  points.forEach((point, index) => {
+    const current = scale(point, index);
+    const next = scale(points[(index + 1) % points.length], index + 1);
+    const midX = (current.x + next.x) / 2;
+    const midY = (current.y + next.y) / 2;
+    const bend = index % 2 === 0 ? 0.045 : -0.035;
+    const controlX = midX + (cy - midY) * bend;
+    const controlY = midY + (midX - cx) * bend;
+    ctx.quadraticCurveTo(controlX, controlY, next.x, next.y);
+  });
+  ctx.closePath();
+}
+
+function drawBrainShell(ctx, brain, palette, active) {
+  const { cx, cy, rx, ry, title } = brain;
+  const glow = active ? 34 : 18;
+  const fill = ctx.createRadialGradient(cx - rx * 0.28, cy - ry * 0.42, 4, cx, cy, rx * 1.08);
+  fill.addColorStop(0, palette.inner);
+  fill.addColorStop(0.56, palette.mid);
+  fill.addColorStop(1, palette.outer);
+  ctx.save();
+  ctx.shadowColor = palette.edge;
+  ctx.shadowBlur = glow;
+  brainPath(ctx, cx, cy, rx, ry);
+  ctx.fillStyle = fill;
   ctx.fill();
-  ctx.globalAlpha = 1;
   ctx.lineWidth = active ? 3.8 : 2.4;
-  ctx.strokeStyle = palette.edge;
+  ctx.strokeStyle = active ? palette.activeEdge : palette.edge;
+  ctx.stroke();
+  ctx.restore();
+
+  if (cortex.canvas.width > 620) {
+    ctx.save();
+    ctx.fillStyle = "rgba(235, 243, 246, 0.9)";
+    ctx.font = `900 ${Math.max(12, Math.floor(rx * 0.082))}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(title, cx, cy - ry * 0.95);
+    ctx.restore();
+  }
+}
+
+function drawPiece(ctx, brain, piece, active, time) {
+  const { cx, cy, rx, ry } = brain;
+  ctx.save();
+  brainPath(ctx, cx, cy, rx, ry);
+  ctx.clip();
+  piecePath(ctx, brain, piece.points, time);
+  const fill = ctx.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry);
+  fill.addColorStop(0, piece.fill[0]);
+  fill.addColorStop(1, piece.fill[1]);
+  ctx.shadowColor = cortexNodes[piece.key]?.color || "#9fb4c0";
+  ctx.shadowBlur = active ? 28 : 8;
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = active ? 3.2 : 1.45;
+  ctx.strokeStyle = active ? (cortexNodes[piece.key]?.color || "#dfe7eb") : "rgba(226, 238, 242, 0.34)";
   ctx.stroke();
 
-  ctx.shadowBlur = 0;
-  ctx.globalAlpha = 0.46 + glow * 0.28;
-  for (let i = -2; i <= 2; i += 1) {
+  ctx.globalAlpha = active ? 0.42 : 0.24;
+  ctx.lineWidth = 1.1;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.62)";
+  for (let i = 0; i < 4; i += 1) {
+    const y = cy + (piece.labelAt[1] - 0.22 + i * 0.13) * ry;
     ctx.beginPath();
-    ctx.ellipse(cx + i * rx * 0.18, cy + Math.sin(i + wobble) * 8, rx * (0.42 - Math.abs(i) * 0.035), ry * 0.72, i * 0.22, 0, Math.PI * 2);
-    ctx.strokeStyle = palette.fold;
-    ctx.lineWidth = 1.5;
+    ctx.moveTo(cx + (piece.labelAt[0] - 0.26) * rx, y);
+    ctx.bezierCurveTo(
+      cx + (piece.labelAt[0] - 0.08) * rx,
+      y - ry * 0.06,
+      cx + (piece.labelAt[0] + 0.10) * rx,
+      y + ry * 0.06,
+      cx + (piece.labelAt[0] + 0.28) * rx,
+      y,
+    );
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
+
   if (cortex.canvas.width > 620) {
-    ctx.fillStyle = "#dcecf1";
-    ctx.font = `900 ${Math.max(12, Math.floor(rx * 0.08))}px Inter, system-ui, sans-serif`;
+    const tx = cx + piece.labelAt[0] * rx;
+    const ty = cy + piece.labelAt[1] * ry;
+    ctx.shadowBlur = 0;
     ctx.textAlign = "center";
-    ctx.fillText(label, cx, cy - ry - 22);
+    ctx.fillStyle = piece.text;
+    ctx.font = `900 ${Math.max(10, Math.floor(rx * 0.07))}px Inter, system-ui, sans-serif`;
+    ctx.fillText(piece.label[0], tx, ty - 3);
+    ctx.fillStyle = "rgba(235, 244, 248, 0.78)";
+    ctx.font = `800 ${Math.max(8, Math.floor(rx * 0.045))}px Inter, system-ui, sans-serif`;
+    ctx.fillText(piece.label[1], tx, ty + Math.max(12, Math.floor(rx * 0.07)));
+  }
+  ctx.restore();
+}
+
+function drawBrainPieces(ctx, brain, pieces, activeKeys, time) {
+  drawBrainShell(ctx, brain, brain.palette, activeKeys.some((key) => pieces.some((piece) => piece.key === key)));
+  pieces.forEach((piece) => {
+    drawPiece(ctx, brain, piece, activeKeys.includes(piece.key), time);
+  });
+  ctx.save();
+  ctx.globalAlpha = 0.38;
+  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "rgba(236, 244, 248, 0.22)";
+  brainPath(ctx, brain.cx, brain.cy, brain.rx, brain.ry);
+  ctx.clip();
+  for (let i = -3; i <= 3; i += 1) {
+    ctx.beginPath();
+    ctx.ellipse(brain.cx + i * brain.rx * 0.15, brain.cy + Math.sin(time + i) * brain.ry * 0.02, brain.rx * 0.32, brain.ry * 0.62, i * 0.18, 0, Math.PI * 2);
+    ctx.stroke();
   }
   ctx.restore();
 }
@@ -190,14 +349,19 @@ function drawConnection(ctx, fromKey, toKey, activeColor, active) {
   const mx = (from.x + to.x) / 2;
   const my = (from.y + to.y) / 2 - cortex.canvas.height * 0.08;
   ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(from.x, from.y);
-  ctx.quadraticCurveTo(mx, my, to.x, to.y);
-  ctx.strokeStyle = active ? activeColor : "rgba(196, 222, 231, 0.18)";
-  ctx.lineWidth = active ? 3.2 : 1.3;
-  ctx.setLineDash(active ? [10, 10] : [5, 11]);
-  ctx.lineDashOffset = -((performance.now() - cortex.startedAt) / 24);
-  ctx.stroke();
+  const pulse = (performance.now() - cortex.startedAt) / 1000;
+  for (let i = 0; i < 3; i += 1) {
+    const offset = (i - 1) * 11;
+    ctx.beginPath();
+    ctx.moveTo(from.x, from.y + offset);
+    ctx.bezierCurveTo(mx, my + offset * 0.2, mx, my + offset * -0.2, to.x, to.y - offset);
+    ctx.strokeStyle = active ? activeColor : "rgba(196, 222, 231, 0.16)";
+    ctx.globalAlpha = active ? 0.72 - i * 0.12 : 0.28 - i * 0.04;
+    ctx.lineWidth = active ? 2.4 : 1.0;
+    ctx.setLineDash(active ? [2, 10] : [1, 12]);
+    ctx.lineDashOffset = -(pulse * 44 + i * 9);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -206,15 +370,15 @@ function drawNode(ctx, key) {
   const active = cortex.activeTech === key || cortex.lastTech === key;
   ctx.save();
   ctx.shadowColor = p.color;
-  ctx.shadowBlur = active ? 24 : 10;
+  ctx.shadowBlur = active ? 26 : 8;
   ctx.beginPath();
-  ctx.arc(p.x, p.y, active ? 12 : 8, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, active ? 8 : 5, 0, Math.PI * 2);
   ctx.fillStyle = p.color;
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(p.x, p.y, active ? 23 : 16, 0, Math.PI * 2);
+  ctx.arc(p.x, p.y, active ? 18 : 12, 0, Math.PI * 2);
   ctx.strokeStyle = active ? p.color : "rgba(210, 237, 246, 0.28)";
-  ctx.lineWidth = active ? 2.5 : 1.2;
+  ctx.lineWidth = active ? 2.1 : 1.0;
   ctx.stroke();
   ctx.restore();
 }
@@ -275,22 +439,38 @@ function drawCortex() {
   }
   ctx.restore();
 
-  const localActive = ["inneros_mcp", "local_model", "govern", "docker"].includes(cortex.activeTech);
-  const sharedActive = ["cognee", "brightdata", "bridge"].includes(cortex.activeTech);
-  drawBlob(ctx, w * 0.30, h * 0.50 + Math.sin(time * 0.9) * 3, w * 0.18, h * 0.27, {
-    hot: "rgba(255, 210, 106, 0.92)",
-    mid: "rgba(255, 143, 111, 0.54)",
-    dark: "rgba(19, 17, 28, 0.86)",
-    edge: localActive ? "#ffd26a" : "rgba(231, 194, 104, 0.78)",
-    fold: "rgba(255, 235, 177, 0.48)",
-  }, localActive, "INNEROS LOCAL BRAIN");
-  drawBlob(ctx, w * 0.72, h * 0.49 + Math.cos(time * 0.8) * 3, w * 0.20, h * 0.29, {
-    hot: "rgba(103, 230, 210, 0.94)",
-    mid: "rgba(68, 227, 189, 0.46)",
-    dark: "rgba(8, 26, 37, 0.9)",
-    edge: sharedActive ? "#67e6d2" : "rgba(103, 230, 210, 0.78)",
-    fold: "rgba(194, 255, 245, 0.45)",
-  }, sharedActive, "COGNEE SHARED MEMORY");
+  const drift = h > 430 ? Math.sin(time * 0.75) * 2.5 : 0;
+  const localBrain = {
+    cx: w * 0.29,
+    cy: h * 0.51 + drift,
+    rx: w * 0.21,
+    ry: h * 0.30,
+    title: "INNEROS LOCAL BRAIN",
+    palette: {
+      inner: "rgba(235, 207, 139, 0.28)",
+      mid: "rgba(74, 70, 78, 0.86)",
+      outer: "rgba(6, 11, 18, 0.94)",
+      edge: "rgba(187, 160, 103, 0.88)",
+      activeEdge: "#e0c276",
+    },
+  };
+  const sharedBrain = {
+    cx: w * 0.72,
+    cy: h * 0.50 - drift,
+    rx: w * 0.22,
+    ry: h * 0.31,
+    title: "COGNEE SHARED MEMORY",
+    palette: {
+      inner: "rgba(128, 219, 207, 0.26)",
+      mid: "rgba(46, 86, 94, 0.84)",
+      outer: "rgba(6, 15, 21, 0.95)",
+      edge: "rgba(110, 207, 196, 0.86)",
+      activeEdge: "#80e0d4",
+    },
+  };
+  const activeKeys = [cortex.activeTech, cortex.lastTech].filter(Boolean);
+  drawBrainPieces(ctx, localBrain, cortexPieces.local, activeKeys, time);
+  drawBrainPieces(ctx, sharedBrain, cortexPieces.shared, activeKeys, time);
 
   const activeFlow = cortexFlows[cortex.activeTech] || [];
   Object.entries(cortexFlows).forEach(([tech, flow]) => {
@@ -304,7 +484,7 @@ function drawCortex() {
     ctx.fillStyle = "rgba(236, 244, 248, 0.82)";
     ctx.font = `800 ${Math.max(11, Math.floor(w / 96))}px Inter, system-ui, sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(cortex.activeStage ? `LIVE STAGE: ${cortex.activeStage.toUpperCase()}` : "WAITING FOR LIVE ROUTE", w * 0.50, h * 0.16);
+    ctx.fillText(cortex.activeStage ? `LIVE STAGE: ${cortex.activeStage.toUpperCase()}` : "REAL ROUTE MAP: MEMORY + WEB + LOCAL ACTION", w * 0.50, h * 0.15);
     ctx.restore();
   }
   requestAnimationFrame(drawCortex);
