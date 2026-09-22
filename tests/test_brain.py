@@ -42,6 +42,26 @@ class FlakyIdentityWeb:
         ]
 
 
+class NoisyIdentityWeb:
+    def __init__(self):
+        self.calls = 0
+
+    async def search(self, query: str, limit: int = 5):
+        self.calls += 1
+        return [
+            Evidence(
+                source="brightdata",
+                summary="Rafael Lopez Rafa-Innerchispa public profile",
+                metadata={"title": "Rafael Lopez Rafa-Innerchispa", "url": "https://github.com/Rafa-Innerchispa"},
+            ),
+            Evidence(
+                source="brightdata",
+                summary="A different Rafael Lopez, illustrator and muralist.",
+                metadata={"title": "Rafael López | Illustrator", "url": "https://rafaellopez.com/"},
+            ),
+        ]
+
+
 class FastTestBrain(PersonalBrain):
     async def _reason(self, prompt: str, context: str) -> str:
         return "TEST_REASONING_OK"
@@ -243,6 +263,19 @@ async def test_identity_questions_retry_brightdata_when_first_serp_has_no_matche
     assert web.queries[1] == "Rafa-Innerchispa"
     assert result.web_hits[0].metadata["title"] == "Rafael Lopez Rafa-Innerchispa"
     assert result.route["evidence_refs"]["brightdata_query"] == "Rafa-Innerchispa"
+
+
+@pytest.mark.asyncio
+async def test_identity_questions_filter_unrelated_same_name_web_hits():
+    memory = DemoMemoryAdapter(seed=["Ralphi is building InnerOS Personal Brain for the hackathon."])
+    web = NoisyIdentityWeb()
+    brain = FastTestBrain(memory=memory, web=web)
+
+    result = await brain.answer("quien soy yo Rafael Lopez InnerChispa?", act=False)
+
+    assert web.calls == 1
+    assert len(result.web_hits) == 1
+    assert result.web_hits[0].metadata["url"] == "https://github.com/Rafa-Innerchispa"
 
 
 @pytest.mark.asyncio

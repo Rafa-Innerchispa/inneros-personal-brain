@@ -83,6 +83,28 @@ class PersonalBrain:
         )
 
     @staticmethod
+    def _is_public_owner_identity_hit(hit: Evidence) -> bool:
+        meta = hit.metadata or {}
+        haystack = " ".join(
+            str(part or "")
+            for part in (
+                hit.summary,
+                meta.get("title"),
+                meta.get("url"),
+            )
+        ).lower()
+        return any(
+            needle in haystack
+            for needle in (
+                "innerchispa",
+                "rafa-innerchispa",
+                "github.com/rafa-innerchispa",
+                "innerchispa.us",
+                "innersparkai",
+            )
+        )
+
+    @staticmethod
     def _needs_live_web(prompt: str) -> bool:
         text = f" {prompt.lower()} "
         markers = (
@@ -277,6 +299,13 @@ class PersonalBrain:
                         web_hits = retry_hits
                         route["web_query"] = retry_query
                         break
+            if route.get("owner_identity_query") and web_hits:
+                identity_hits = [
+                    hit for hit in web_hits
+                    if not hit.metadata.get("no_public_matches") and self._is_public_owner_identity_hit(hit)
+                ]
+                if identity_hits:
+                    web_hits = identity_hits
             if not web_hits:
                 web_hits = [
                     Evidence(
