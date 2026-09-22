@@ -68,6 +68,10 @@ class PersonalBrain:
             "Rafael Lopez Ralphi IA InnerChispa PC Doctor InnerOS",
         )
 
+    @classmethod
+    def _public_personal_context_query(cls, prompt: str) -> str:
+        return f"{cls._public_identity_query()} {prompt}"[:500]
+
     @staticmethod
     def _needs_live_web(prompt: str) -> bool:
         text = f" {prompt.lower()} "
@@ -110,10 +114,12 @@ class PersonalBrain:
             reason = "Forced live-web route through Bright Data."
         elif mode == "memory_first":
             use_memory = True
-            use_web = needs_web or owner_identity
+            use_web = True
             policy = "memory_first"
-            reason = "Memory-first route; Bright Data is added for public owner identity or current web context."
-            if owner_identity:
+            reason = "Memory-first route; Cognee answers first and Bright Data adds public context."
+            if personal:
+                web_query = self._public_personal_context_query(prompt)
+            elif owner_identity:
                 web_query = self._public_identity_query()
         elif owner_identity:
             use_memory = True
@@ -121,11 +127,19 @@ class PersonalBrain:
             policy = "identity_memory_web"
             reason = "Owner identity question: Cognee memory plus Bright Data public identity search, then local Qwen synthesis."
             web_query = self._public_identity_query()
+        elif personal:
+            use_memory = True
+            use_web = True
+            policy = "personal_memory_web"
+            reason = "Personal/project memory question: Cognee memory plus Bright Data public context, then local Qwen synthesis."
+            web_query = self._public_personal_context_query(prompt)
         else:
             use_memory = True
-            use_web = needs_web
-            policy = "auto_live_web" if needs_web else "auto_memory"
-            reason = "AUTO routing selected sources from prompt intent."
+            use_web = True
+            policy = "auto_all_sources"
+            reason = "AUTO demo route: every question uses Cognee memory, Bright Data live web, Strands orchestration and local Qwen synthesis."
+            if personal:
+                web_query = self._public_personal_context_query(prompt)
         return {
             "mode": mode,
             "policy": policy,
@@ -236,20 +250,20 @@ class PersonalBrain:
             })
             tool_calls["brightdata_search"] += 1
             web_hits = await self.web.search(route["web_query"])
-            if not web_hits and route["owner_identity_query"]:
+            if not web_hits:
                 web_hits = [
                     Evidence(
                         source="brightdata",
                         summary=(
                             "[BRIGHT DATA LIVE SEARCH][NO PUBLIC MATCHES] "
                             f"Bright Data searched the public web for: {route['web_query']}. "
-                            "No high-confidence public organic result was returned for this identity query."
+                            "No high-confidence public organic result was returned for this query."
                         ),
                         metadata={
                             "live": True,
                             "no_public_matches": True,
                             "query": route["web_query"],
-                            "title": "Bright Data public identity search",
+                            "title": "Bright Data live search",
                             "url": "",
                         },
                     )
@@ -280,20 +294,19 @@ class PersonalBrain:
                 "source_class": "Bright Data live web",
             })
 
-        reason_memory_hits = memory_hits
-        if act:
-            historical_failure_terms = (
-                "sandboxing issue",
-                "failed due to",
-                "could not be created",
-                "requires_runtime",
-                "docker action did not complete",
-            )
-            reason_memory_hits = [
-                x
-                for x in memory_hits
-                if not any(term in x.summary.lower() for term in historical_failure_terms)
-            ]
+        historical_failure_terms = (
+            "sandboxing issue",
+            "failed due to",
+            "could not be created",
+            "requires_runtime",
+            "docker action did not complete",
+            "sandboxing failure",
+        )
+        reason_memory_hits = [
+            x
+            for x in memory_hits
+            if not any(term in x.summary.lower() for term in historical_failure_terms)
+        ]
 
         context = "\n".join(
             [f"MEMORY: {x.summary}" for x in reason_memory_hits]

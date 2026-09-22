@@ -24,6 +24,22 @@ class FastTestBrain(PersonalBrain):
 
 
 @pytest.mark.asyncio
+async def test_auto_route_uses_all_main_sources_for_any_question():
+    memory = DemoMemoryAdapter(seed=["InnerOS builds local-first AI systems."])
+    web = NoWeb()
+    brain = FastTestBrain(memory=memory, web=web)
+
+    result = await brain.answer("What should I do next?", act=False)
+
+    assert web.calls == 1
+    assert result.memory_hits
+    assert result.route["route_policy"] == "auto_all_sources"
+    assert "cognee_shared_memory" in result.route["sources_used"]
+    assert "brightdata_live_web" in result.route["sources_used"]
+    assert "local_qwen_vllm" in result.route["sources_used"]
+
+
+@pytest.mark.asyncio
 async def test_brain_remembers_outcome():
     memory = DemoMemoryAdapter(seed=["InnerOS builds local-first AI systems."])
     brain = FastTestBrain(memory=memory, web=NoWeb())
@@ -188,3 +204,20 @@ async def test_identity_questions_use_cognee_and_brightdata_in_auto_route():
     assert result.route["route_policy"] == "identity_memory_web"
     assert result.route["evidence_refs"]["brightdata_query"] == "Rafael Lopez Ralphi IA InnerChispa PC Doctor InnerOS"
     assert "local_qwen_vllm" in result.route["sources_used"]
+
+
+@pytest.mark.asyncio
+async def test_project_memory_questions_use_brightdata_in_auto_route():
+    memory = DemoMemoryAdapter(seed=["InnerOS Personal Brain uses Cognee, Bright Data, Qwen and Docker."])
+    web = NoWeb()
+    brain = FastTestBrain(memory=memory, web=web)
+
+    result = await brain.answer(
+        "What do you remember about what I am building, and what should I focus on next?",
+        act=False,
+    )
+
+    assert web.calls == 1
+    assert result.route["route_policy"] == "personal_memory_web"
+    assert result.web_hits[0].metadata["no_public_matches"] is True
+    assert "brightdata_live_web" in result.route["sources_used"]
