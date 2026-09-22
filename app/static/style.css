@@ -921,16 +921,28 @@ footer strong {
     width: 100%;
   }
 
+  .cortex-panel,
+  .command-panel,
+  .matrix-panel,
+  .events-panel {
+    border-radius: 8px;
+  }
+
   .brain-map {
-    min-height: 520px;
+    min-height: 0;
   }
 
   #cortexCanvas {
-    height: 470px;
+    height: 350px;
   }
 
   .cortex-labels {
-    height: 470px;
+    position: static;
+    height: auto;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    padding: 8px 10px 0;
   }
 
   .brain-legend {
@@ -940,8 +952,10 @@ footer strong {
   }
 
   .cortex-chip {
-    min-width: 108px;
-    padding: 6px 7px;
+    position: static;
+    min-width: 0;
+    transform: none;
+    padding: 7px 6px;
   }
 
   .cortex-chip b {
@@ -952,15 +966,6 @@ footer strong {
     font-size: 8px;
   }
 
-  .local-chip { left: 18%; top: 52%; }
-  .qwen-chip { left: 28%; top: 30%; }
-  .govern-chip { left: 26%; top: 72%; }
-  .docker-chip { left: 45%; top: 76%; }
-  .strands-chip { left: 50%; top: 49%; }
-  .cognee-chip { left: 73%; top: 53%; }
-  .brightdata-chip { left: 78%; top: 25%; }
-  .bridge-chip { left: 50%; top: 82%; }
-
   .agents-strip,
   .pipeline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -969,7 +974,15 @@ footer strong {
   .agents-strip {
     position: static;
     padding: 0 10px 12px;
-    margin-top: 2px;
+    margin-top: 8px;
+  }
+
+  .pipeline {
+    margin-top: 10px;
+  }
+
+  .pipeline > div {
+    min-height: 58px;
   }
 
   .route-controls {
