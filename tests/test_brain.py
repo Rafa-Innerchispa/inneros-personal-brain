@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.adapters import DemoMemoryAdapter
+from app.adapters import BrightDataAdapter, DemoMemoryAdapter
 from app.brain import PersonalBrain
 from app.cognee_agent_tools import CogneeAgentMemoryTools
 from app.memory_fabric import build_memory_fabric
@@ -105,6 +105,7 @@ def test_memory_fabric_centers_cognee_and_brightdata(monkeypatch):
     assert surfaces["personal_brain"]["state"] == "configured"
     assert surfaces["strands"]["transport"] == "direct Cognee agent tools"
     assert surfaces["brightdata"]["state"] == "ready"
+    assert "SERP" in surfaces["brightdata"]["transport"]
     assert surfaces["ralphi"]["required_for_core"] is False
     assert surfaces["gmail"]["state"] == "pending_auth"
 
@@ -120,3 +121,18 @@ def test_live_cortex_renders_fabric_matrix():
     assert "renderFabric" in js
     assert "brightdata" in js
     assert ".fabric-row" in css
+
+
+def test_brightdata_rest_serp_payload_extracts_organic_results():
+    payload = {
+        "parsed": {
+            "organic_results": [
+                {"title": "One", "description": "First result", "link": "https://example.com/1"},
+                {"title": "Two", "description": "Second result", "link": "https://example.com/2"},
+            ]
+        }
+    }
+
+    organic = BrightDataAdapter._extract_rest_organic(payload)
+
+    assert [item["title"] for item in organic] == ["One", "Two"]

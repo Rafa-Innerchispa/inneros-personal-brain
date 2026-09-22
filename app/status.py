@@ -25,6 +25,10 @@ def sponsor_status() -> dict:
     docker = DockerSandboxExecutor().smoke()
     mcp_reachable = _tcp_open("127.0.0.1", 8102)
     memory_fabric = build_memory_fabric().as_dict()
+    brightdata_ready = bool(
+        os.getenv("BRIGHTDATA_API_TOKEN")
+        or (os.getenv("BRIGHTDATA_API_KEY") and os.getenv("BRIGHTDATA_SERP_ZONE", os.getenv("BRIGHTDATA_ZONE", "inneros")))
+    )
     return {
         "inneros_mcp": {
             "state": "connected" if mcp_reachable else "optional_offline",
@@ -58,7 +62,7 @@ def sponsor_status() -> dict:
         },
         "brightdata": {
             "state": "ready"
-            if os.getenv("BRIGHTDATA_API_TOKEN")
+            if brightdata_ready
             else "server_capability_verified",
             "label": "Bright Data live web",
             "core_dependency": True,

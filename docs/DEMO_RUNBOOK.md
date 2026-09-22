@@ -55,11 +55,16 @@ Show the provider evidence and current search result rather than a prepared scre
 If venue networking blocks the provider, show that the UI labels the fallback as
 verified replay. Do not call replay data live.
 
-For this demo the Bright Data path is **SERP API through the Bright Data MCP
-`search_engine` tool**. That is the right default because the Personal Brain
-needs fresh search results and opportunity discovery. Use Browser API only for
-multi-step navigation, login-like flows, or page interaction; use Web Unlocker
-only when a specific hard-to-access page must be fetched or extracted.
+For this demo the Bright Data path is **SERP API**. The backend supports both:
+
+- REST SERP through `POST https://api.brightdata.com/request` with
+  `BRIGHTDATA_API_KEY` and `BRIGHTDATA_SERP_ZONE=inneros`;
+- Bright Data MCP `search_engine` through `BRIGHTDATA_API_TOKEN` or
+  `BRIGHTDATA_MCP_URL`.
+
+Use Browser API only for multi-step navigation, login-like flows, or page
+interaction; use Web Unlocker only when a specific hard-to-access page must be
+fetched or extracted.
 
 ## 4. Prove reasoning
 

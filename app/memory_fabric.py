@@ -73,7 +73,10 @@ def build_memory_fabric() -> MemoryFabric:
     cognee_cloud_ready = cognee_cloud_configured and os.getenv("COGNEE_LIVE_VERIFIED") == "1"
     cognee_mcp_ready = _tcp_open("127.0.0.1", int(os.getenv("COGNEE_MCP_PORT", "8241")))
     ralphi_ready = _tcp_open("127.0.0.1", int(os.getenv("INNEROS_MCP_PORT", "8102")))
-    brightdata_ready = bool(os.getenv("BRIGHTDATA_API_TOKEN"))
+    brightdata_ready = bool(
+        os.getenv("BRIGHTDATA_API_TOKEN")
+        or (os.getenv("BRIGHTDATA_API_KEY") and os.getenv("BRIGHTDATA_SERP_ZONE", os.getenv("BRIGHTDATA_ZONE", "inneros")))
+    )
     gmail_auth_ready = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("GMAIL_OAUTH_CLIENT_FILE"))
 
     return MemoryFabric(
@@ -101,7 +104,7 @@ def build_memory_fabric() -> MemoryFabric:
             FabricSurface(
                 key="brightdata",
                 label="Bright Data",
-                transport="MCP search_engine",
+                transport="SERP REST or MCP search_engine",
                 role="Live public-web discovery for current opportunities",
                 state="ready" if brightdata_ready else "configured",
                 required_for_core=True,

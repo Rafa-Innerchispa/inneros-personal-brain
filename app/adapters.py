@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from urllib.parse import quote_plus
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
@@ -200,6 +201,9 @@ class BrightDataAdapter:
     def __init__(self) -> None:
         self.base = os.getenv("BRIGHTDATA_MCP_URL", "https://mcp.brightdata.com/mcp").rstrip("/")
         self.token = os.getenv("BRIGHTDATA_API_TOKEN", "")
+        self.rest_api_key = os.getenv("BRIGHTDATA_API_KEY", "")
+        self.rest_zone = os.getenv("BRIGHTDATA_SERP_ZONE", os.getenv("BRIGHTDATA_ZONE", "inneros"))
+        self.rest_endpoint = os.getenv("BRIGHTDATA_REST_URL", "https://api.brightdata.com/request")
         self.cache_path = Path(
             os.getenv(
                 "BRIGHTDATA_REPLAY_CACHE",
@@ -279,7 +283,72 @@ class BrightDataAdapter:
         except Exception:
             pass
 
+    @staticmethod
+    def _extract_rest_organic(payload: object) -> list[dict]:
+        if not isinstance(payload, dict):
+            return []
+        candidates = [
+            payload.get("organic"),
+            payload.get("organic_results"),
+            payload.get("results"),
+            payload.get("search_results"),
+        ]
+        parsed = payload.get("parsed")
+        if isinstance(parsed, dict):
+            candidates.extend([
+                parsed.get("organic"),
+                parsed.get("organic_results"),
+                parsed.get("results"),
+                parsed.get("search_results"),
+            ])
+        for candidate in candidates:
+            if isinstance(candidate, list):
+                return [item for item in candidate if isinstance(item, dict)]
+        return []
+
+    async def _search_rest_serp(self, query: str, limit: int) -> list[Evidence]:
+        if not self.rest_api_key or not self.rest_zone:
+            return []
+        headers = {
+            "Authorization": f"Bearer {self.rest_api_key}",
+            "Content-Type": "application/json",
+        }
+        search_url = f"https://www.google.com/search?q={quote_plus(query[:500])}"
+        parsed_payload = {
+            "zone": self.rest_zone,
+            "url": search_url,
+            "format": "json",
+            "data_format": "parsed_light",
+        }
+        async with httpx.AsyncClient(timeout=httpx.Timeout(35.0, connect=12.0)) as client:
+            response = await client.post(self.rest_endpoint, headers=headers, json=parsed_payload)
+            response.raise_for_status()
+            data = response.json()
+        organic = self._extract_rest_organic(data)
+        if not organic:
+            raw_payload = {
+                "zone": self.rest_zone,
+                "url": search_url,
+                "format": "raw",
+            }
+            async with httpx.AsyncClient(timeout=httpx.Timeout(90.0, connect=12.0)) as client:
+                response = await client.post(self.rest_endpoint, headers=headers, json=raw_payload)
+                response.raise_for_status()
+                data = response.json()
+            organic = self._extract_rest_organic(data)
+        if organic:
+            self._write_cache(organic)
+            return self._to_evidence(organic, limit, replay=False)
+        return []
+
     async def search(self, query: str, limit: int = 5) -> list[Evidence]:
+        try:
+            rest_results = await self._search_rest_serp(query, limit)
+            if rest_results:
+                return rest_results
+        except (httpx.TimeoutException, httpx.HTTPError, ValueError):
+            pass
+
         if not self.token:
             return self._read_cache(limit)
 
