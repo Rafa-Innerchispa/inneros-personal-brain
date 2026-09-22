@@ -89,6 +89,138 @@ class InnerOSMemoryAdapter:
             response.raise_for_status()
 
 
+class CogneeMcpMemoryAdapter:
+    """Official Cognee MCP memory adapter over the local MCP endpoint."""
+
+    def __init__(self) -> None:
+        port = os.getenv("COGNEE_MCP_PORT", "8241")
+        self.url = os.getenv("COGNEE_MCP_URL", f"http://127.0.0.1:{port}/mcp").rstrip("/")
+        self.dataset = os.getenv("COGNEE_DATASET", "inneros-personal-brain")
+
+    @staticmethod
+    def _parse_sse(text: str) -> dict:
+        payload = "\n".join(line[6:] for line in text.splitlines() if line.startswith("data: "))
+        return json.loads(payload or text)
+
+    async def _mcp_tool_call(self, name: str, arguments: dict, timeout: float = 60.0) -> dict:
+        headers = {
+            "Accept": "application/json, text/event-stream",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=httpx.Timeout(timeout, connect=8.0), follow_redirects=True) as client:
+            init = await client.post(
+                self.url,
+                headers=headers,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "initialize",
+                    "params": {
+                        "protocolVersion": "2025-06-18",
+                        "capabilities": {},
+                        "clientInfo": {"name": "inneros-personal-brain", "version": "0.3"},
+                    },
+                },
+            )
+            init.raise_for_status()
+            session = init.headers.get("mcp-session-id")
+            if session:
+                headers["mcp-session-id"] = session
+                await client.post(
+                    self.url,
+                    headers=headers,
+                    json={"jsonrpc": "2.0", "method": "notifications/initialized", "params": {}},
+                )
+            response = await client.post(
+                self.url,
+                headers=headers,
+                json={
+                    "jsonrpc": "2.0",
+                    "id": 2,
+                    "method": "tools/call",
+                    "params": {"name": name, "arguments": arguments},
+                },
+            )
+            response.raise_for_status()
+            return self._parse_sse(response.text)
+
+    @staticmethod
+    def _content_text(payload: dict) -> str:
+        result = payload.get("result") if isinstance(payload, dict) else {}
+        content = result.get("content") if isinstance(result, dict) else []
+        texts = [
+            item.get("text", "")
+            for item in content
+            if isinstance(item, dict) and item.get("type") == "text"
+        ]
+        return "\n".join(texts).strip()
+
+    async def search(self, query: str, limit: int = 8) -> list[Evidence]:
+        try:
+            payload = await self._mcp_tool_call(
+                "recall",
+                {
+                    "query": query,
+                    "datasets": self.dataset,
+                    "top_k": max(1, min(limit, 20)),
+                },
+                timeout=75.0,
+            )
+        except (httpx.HTTPError, ValueError, KeyError, TypeError) as exc:
+            return [
+                Evidence(
+                    source="cognee",
+                    summary="Cognee MCP recall was temporarily unavailable; continuing with other live sources.",
+                    metadata={
+                        "dataset": self.dataset,
+                        "live": False,
+                        "unavailable": True,
+                        "transport": "mcp",
+                        "error_type": type(exc).__name__,
+                    },
+                )
+            ]
+        result = payload.get("result", {})
+        if result.get("isError"):
+            return [
+                Evidence(
+                    source="cognee",
+                    summary=self._content_text(payload) or "Cognee MCP recall returned an error.",
+                    metadata={"dataset": self.dataset, "live": False, "unavailable": True, "transport": "mcp"},
+                )
+            ]
+        text = self._content_text(payload)
+        if not text:
+            return []
+        return [
+            Evidence(
+                source="cognee",
+                summary=text,
+                metadata={"dataset": self.dataset, "live": True, "transport": "mcp"},
+            )
+        ]
+
+    async def remember(self, text: str, metadata: dict | None = None) -> None:
+        envelope = text if not metadata else json.dumps(
+            {"text": text, "metadata": metadata},
+            ensure_ascii=False,
+            default=str,
+        )
+        try:
+            await self._mcp_tool_call(
+                "remember",
+                {
+                    "data": envelope,
+                    "dataset_name": self.dataset,
+                    "background": True,
+                    "self_improvement": False,
+                },
+                timeout=45.0,
+            )
+        except (httpx.HTTPError, ValueError, KeyError, TypeError):
+            return
+
+
 class CogneeCloudMemoryAdapter:
     """Live Cognee Cloud memory through the tenant's documented HTTP contract."""
 

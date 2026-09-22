@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import socket
+from urllib.parse import urlparse
 
 from app.memory_fabric import build_memory_fabric
 from app.sandbox import DockerSandboxExecutor
@@ -20,10 +21,20 @@ def _tcp_open(host: str, port: int, timeout: float = 0.35) -> bool:
         return False
 
 
+def _url_tcp_open(url: str, timeout: float = 0.35) -> bool:
+    parsed = urlparse(url)
+    host = parsed.hostname or "127.0.0.1"
+    port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    return _tcp_open(host, port, timeout=timeout)
+
+
 def sponsor_status() -> dict:
     """Return demo-safe readiness only; never expose credentials."""
     docker = DockerSandboxExecutor().smoke()
     mcp_reachable = _tcp_open("127.0.0.1", 8102)
+    cognee_mcp_reachable = _tcp_open("127.0.0.1", int(os.getenv("COGNEE_MCP_PORT", "8241")))
+    llm_url = os.getenv("LOCAL_LLM_BASE_URL", "")
+    local_model_ready = bool(llm_url and _url_tcp_open(llm_url))
     memory_fabric = build_memory_fabric().as_dict()
     brightdata_rest_ready = bool(
         os.getenv("BRIGHTDATA_API_KEY")
@@ -40,7 +51,7 @@ def sponsor_status() -> dict:
         },
         "cognee": {
             "state": "ready"
-            if os.getenv("COGNEE_LIVE_VERIFIED") == "1"
+            if (cognee_mcp_reachable or os.getenv("COGNEE_LIVE_VERIFIED") == "1")
             else "configured" if os.getenv("COGNEE_API_KEY") else "platform_ready_secret_pending",
             "label": "Cognee structured memory",
             "core_dependency": True,
@@ -48,8 +59,7 @@ def sponsor_status() -> dict:
         "cognee_agent_memory": {
             "state": "ready"
             if (
-                os.getenv("COGNEE_LIVE_VERIFIED") == "1"
-                and os.getenv("COGNEE_API_KEY")
+                cognee_mcp_reachable
                 and _importable("strands")
             )
             else "configured"
@@ -60,7 +70,7 @@ def sponsor_status() -> dict:
             else "dependency_pending",
             "label": "Cognee direct Strands agent memory",
             "core_dependency": True,
-            "transport": "direct_cloud_http_tools",
+            "transport": "official_local_mcp",
             "dataset": os.getenv("COGNEE_DATASET", "inneros-personal-brain"),
         },
         "brightdata": {
@@ -81,16 +91,14 @@ def sponsor_status() -> dict:
             "core_dependency": True,
         },
         "local_model": {
-            "state": "configured" if os.getenv("LOCAL_LLM_BASE_URL") else "default_local_route",
+            "state": "ready" if local_model_ready else "configured" if os.getenv("LOCAL_LLM_BASE_URL") else "default_local_route",
             "label": "Local Qwen / vLLM inference",
             "core_dependency": True,
         },
         "connectors": {
             "mcp_reachable": mcp_reachable,
-            "cognee_direct_agent_memory": bool(
-                os.getenv("COGNEE_API_KEY")
-            ),
-            "cognee_mcp_surface": "registered_platform_capability",
+            "cognee_direct_agent_memory": cognee_mcp_reachable,
+            "cognee_mcp_surface": "ready" if cognee_mcp_reachable else "registered_platform_capability",
             "github": "via_mcp" if mcp_reachable else "bridge_optional",
             "gmail": "via_mcp" if mcp_reachable else "bridge_optional",
             "calendar": "via_mcp" if mcp_reachable else "bridge_optional",

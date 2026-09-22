@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 from app.adapters import (
     BrightDataAdapter,
     CogneeCloudMemoryAdapter,
+    CogneeMcpMemoryAdapter,
     CogneeMemoryAdapter,
     DemoMemoryAdapter,
     InnerOSMemoryAdapter,
@@ -30,8 +31,11 @@ app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 def build_brain() -> PersonalBrain:
     # The hackathon brain is intentionally able to run without Ralphi MCP.
-    # Cognee Cloud is the preferred persistent memory when its runtime secret exists.
-    if os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL"):
+    # The local official Cognee MCP is preferred when present because it is
+    # the shared agent memory surface used by Codex/Cursor/Antigravity.
+    if os.getenv("COGNEE_MCP_URL") or os.getenv("COGNEE_MCP_PORT"):
+        memory = CogneeMcpMemoryAdapter()
+    elif os.getenv("COGNEE_API_KEY") and os.getenv("COGNEE_SERVICE_URL"):
         memory = CogneeCloudMemoryAdapter()
     elif os.getenv("USE_COGNEE", "0") == "1":
         memory = CogneeMemoryAdapter()
