@@ -49,7 +49,7 @@ let voiceReplyEnabled = true;
 let recognition = null;
 
 const cortexNodes = {
-  input: { x: 0.08, y: 0.16, color: "#f3f7fb", label: "Prompt" },
+  input: { x: 0.94, y: 0.30, color: "#f3f7fb", label: "Prompt" },
   inneros_mcp: { x: 0.20, y: 0.51, color: "#d6b46a", label: "InnerOS" },
   local_model: { x: 0.30, y: 0.34, color: "#aeb8c8", label: "Qwen" },
   govern: { x: 0.29, y: 0.67, color: "#8ba7bd", label: "Govern" },
@@ -187,6 +187,18 @@ function answerSpeechText(data) {
     route.fallback_active ? "La ruta reporto degradacion." : "Sin degradacion reportada.",
   ].join(" ");
   return `${sources} ${finalAnswer}`.slice(0, 1800);
+}
+
+function setTheme(mode) {
+  const light = mode === "light";
+  document.body.classList.toggle("light", light);
+  const button = $("themeBtn");
+  if (button) button.textContent = light ? "Dark" : "Light";
+  try {
+    window.localStorage.setItem("inneros-theme", light ? "light" : "dark");
+  } catch {
+    // localStorage can be blocked; theme still works for this session.
+  }
 }
 
 function speakText(text) {
@@ -548,16 +560,17 @@ function drawCortex() {
   const time = (performance.now() - cortex.startedAt) / 1000;
 
   ctx.clearRect(0, 0, w, h);
+  const lightMode = document.body.classList.contains("light");
   const bg = ctx.createLinearGradient(0, 0, w, h);
-  bg.addColorStop(0, "#061018");
-  bg.addColorStop(0.54, "#081723");
-  bg.addColorStop(1, "#050c12");
+  bg.addColorStop(0, lightMode ? "#f7fbff" : "#061018");
+  bg.addColorStop(0.54, lightMode ? "#edf6fb" : "#081723");
+  bg.addColorStop(1, lightMode ? "#f9fbf7" : "#050c12");
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, w, h);
 
   ctx.save();
-  ctx.globalAlpha = 0.18;
-  ctx.strokeStyle = "#33576b";
+  ctx.globalAlpha = lightMode ? 0.22 : 0.18;
+  ctx.strokeStyle = lightMode ? "#bfd3df" : "#33576b";
   ctx.lineWidth = 1;
   const grid = Math.max(42, w / 24);
   for (let x = 0; x < w; x += grid) {
@@ -576,30 +589,30 @@ function drawCortex() {
 
   const drift = h > 430 ? Math.sin(time * 0.75) * 2.5 : 0;
   const localBrain = {
-    cx: w * 0.29,
+    cx: w * 0.30,
     cy: h * 0.51 + drift,
-    rx: w * 0.21,
-    ry: h * 0.30,
+    rx: w * 0.245,
+    ry: h * 0.35,
     title: "INNEROS LOCAL BRAIN",
     palette: {
-      inner: "rgba(235, 207, 139, 0.28)",
-      mid: "rgba(74, 70, 78, 0.86)",
-      outer: "rgba(6, 11, 18, 0.94)",
-      edge: "rgba(187, 160, 103, 0.88)",
+      inner: lightMode ? "rgba(255, 220, 130, 0.46)" : "rgba(235, 207, 139, 0.28)",
+      mid: lightMode ? "rgba(222, 233, 240, 0.88)" : "rgba(74, 70, 78, 0.86)",
+      outer: lightMode ? "rgba(244, 248, 251, 0.96)" : "rgba(6, 11, 18, 0.94)",
+      edge: lightMode ? "rgba(191, 145, 38, 0.88)" : "rgba(187, 160, 103, 0.88)",
       activeEdge: "#e0c276",
     },
   };
   const sharedBrain = {
-    cx: w * 0.72,
+    cx: w * 0.725,
     cy: h * 0.50 - drift,
-    rx: w * 0.22,
-    ry: h * 0.31,
+    rx: w * 0.245,
+    ry: h * 0.35,
     title: "COGNEE SHARED MEMORY",
     palette: {
-      inner: "rgba(128, 219, 207, 0.26)",
-      mid: "rgba(46, 86, 94, 0.84)",
-      outer: "rgba(6, 15, 21, 0.95)",
-      edge: "rgba(110, 207, 196, 0.86)",
+      inner: lightMode ? "rgba(104, 216, 204, 0.48)" : "rgba(128, 219, 207, 0.26)",
+      mid: lightMode ? "rgba(221, 241, 242, 0.9)" : "rgba(46, 86, 94, 0.84)",
+      outer: lightMode ? "rgba(246, 251, 252, 0.96)" : "rgba(6, 15, 21, 0.95)",
+      edge: lightMode ? "rgba(20, 151, 139, 0.88)" : "rgba(110, 207, 196, 0.86)",
       activeEdge: "#80e0d4",
     },
   };
@@ -611,9 +624,6 @@ function drawCortex() {
   const activeLinkKeys = new Set((cortex.activeLinks || []).map(([from, to]) => linkKey(from, to)));
   const completeLinkKeys = new Set((cortex.completedLinks || []).map(([from, to]) => linkKey(from, to)));
   const allLinks = new Map();
-  Object.entries(cortexFlows).forEach(([tech, flow]) => {
-    allLinks.set(linkKey(flow[0], flow[1]), { tech, flow });
-  });
   (cortex.activeLinks || []).forEach((flow) => {
     allLinks.set(linkKey(flow[0], flow[1]), { tech: flow[1], flow });
   });
@@ -624,15 +634,24 @@ function drawCortex() {
     const state = activeLinkKeys.has(key) ? "active" : completeLinkKeys.has(key) ? "complete" : "idle";
     drawConnection(ctx, flow[0], flow[1], cortexNodes[tech]?.color || cortexNodes[flow[1]]?.color || "#80c7ff", state);
   });
-  Object.keys(cortexNodes).forEach((key) => drawNode(ctx, key));
+  const visibleNodes = new Set([cortex.activeTech, ...completedKeys.slice(-5)].filter(Boolean));
+  (cortex.activeLinks || []).forEach(([from, to]) => {
+    visibleNodes.add(from);
+    visibleNodes.add(to);
+  });
+  (cortex.completedLinks || []).slice(-8).forEach(([from, to]) => {
+    visibleNodes.add(from);
+    visibleNodes.add(to);
+  });
+  visibleNodes.forEach((key) => drawNode(ctx, key));
   drawParticles(ctx);
 
   if (w > 620) {
     ctx.save();
-    ctx.fillStyle = "rgba(236, 244, 248, 0.82)";
+    ctx.fillStyle = lightMode ? "rgba(25, 48, 62, 0.74)" : "rgba(236, 244, 248, 0.82)";
     ctx.font = `800 ${Math.max(11, Math.floor(w / 96))}px Inter, system-ui, sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText(cortex.activeStage ? `LIVE STAGE: ${cortex.activeStage.toUpperCase()}` : "REAL ROUTE MAP: MEMORY + WEB + LOCAL ACTION", w * 0.50, h * 0.15);
+    ctx.fillText(cortex.activeStage ? `LIVE STAGE: ${cortex.activeStage.toUpperCase()}` : "REAL ROUTE MAP: MEMORY + WEB + LOCAL ACTION", w * 0.50, h * 0.10);
     ctx.restore();
   }
   requestAnimationFrame(drawCortex);
@@ -660,7 +679,7 @@ function renderFabric(fabric) {
       <button class="fabric-row ${cls}" data-detail="${escapeHtml(surface.key)}">
         <span>${escapeHtml(surfaceLabels[surface.key] || surface.label)}</span>
         <b>${escapeHtml(normalizeState(surface.state))}</b>
-        <small>${escapeHtml(surface.transport)} · ${required}</small>
+        <small title="${escapeHtml(surface.transport)}">${required}</small>
       </button>
     `;
   }).join("");
@@ -674,7 +693,7 @@ function renderRoutes(fabric) {
       <button class="route-row ${cls}" data-detail="${escapeHtml(route.key)}">
         <span>${escapeHtml(route.label)}</span>
         <b>${escapeHtml(normalizeState(route.state))}</b>
-        <small>${escapeHtml(route.route_class)} · ${escapeHtml(route.evidence)}</small>
+        <small title="${escapeHtml(route.evidence)}">${escapeHtml(route.route_class)}</small>
       </button>
     `;
   }).join("");
@@ -949,6 +968,9 @@ $("fileInput").addEventListener("change", (event) => {
     addEvent("Files", "error", error.message || "Attachment read failed");
   });
 });
+$("themeBtn").addEventListener("click", () => {
+  setTheme(document.body.classList.contains("light") ? "dark" : "light");
+});
 document.querySelectorAll("[data-route]").forEach((button) => {
   button.addEventListener("click", () => {
     activeRouteMode = button.dataset.route || "auto";
@@ -957,6 +979,11 @@ document.querySelectorAll("[data-route]").forEach((button) => {
   });
 });
 
+try {
+  setTheme(window.localStorage.getItem("inneros-theme") || "dark");
+} catch {
+  setTheme("dark");
+}
 setupCortex();
 setupVoiceInput();
 loadStatus();

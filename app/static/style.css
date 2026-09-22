@@ -36,6 +36,28 @@ body {
   letter-spacing: 0;
 }
 
+body.light {
+  --bg: #f4f8fb;
+  --panel: #ffffff;
+  --panel-2: #edf5fa;
+  --line: #bfd2df;
+  --line-strong: #8fb0c3;
+  --text: #102433;
+  --muted: #527084;
+  --blue: #1677c7;
+  --teal: #0cae9f;
+  --amber: #c99521;
+  --coral: #c8644f;
+  --green: #20965c;
+  --red: #d23d51;
+  --steel: #5f7380;
+  --iridium: #5c5ad6;
+  background:
+    linear-gradient(180deg, rgba(22, 119, 199, 0.08), transparent 190px),
+    repeating-linear-gradient(90deg, rgba(16, 36, 51, 0.045) 0 1px, transparent 1px 54px),
+    var(--bg);
+}
+
 button,
 textarea {
   font: inherit;
@@ -104,6 +126,18 @@ h1 {
   border: 1px solid rgba(76, 224, 186, 0.32);
   border-radius: 8px;
   background: #0c201f;
+}
+
+.theme-toggle {
+  margin-left: auto;
+  min-width: 58px;
+  min-height: 30px;
+  border: 1px solid rgba(128, 199, 255, 0.46);
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(7, 18, 27, 0.72);
+  font-size: 11px;
+  font-weight: 850;
 }
 
 .status-chip strong,
@@ -193,7 +227,7 @@ h1 {
 
 .brain-map {
   position: relative;
-  min-height: 570px;
+  min-height: 598px;
   margin-top: 8px;
   border: 1px solid rgba(63, 107, 130, 0.42);
   border-radius: 8px;
@@ -226,7 +260,7 @@ h1 {
   z-index: 1;
   display: block;
   width: 100%;
-  height: 528px;
+  height: 568px;
   background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.035), transparent 45%);
 }
 
@@ -806,7 +840,7 @@ button:disabled {
 
 .matrix-panel,
 .events-panel {
-  min-height: 280px;
+  min-height: 232px;
   padding: 14px;
 }
 
@@ -850,6 +884,8 @@ button:disabled {
   grid-column: 1 / -1;
   color: var(--muted);
   font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   overflow-wrap: anywhere;
 }
 
@@ -872,7 +908,7 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  height: 190px;
+  height: 146px;
   margin-top: 12px;
   overflow: auto;
   padding-right: 2px;
@@ -948,6 +984,82 @@ footer strong {
   text-align: right;
 }
 
+body.light .status-chip {
+  border-color: rgba(32, 150, 92, 0.24);
+  background: #eaf8f2;
+}
+
+body.light .theme-toggle,
+body.light .button-row button,
+body.light .route-controls button,
+body.light .input-tools button,
+body.light .file-tool {
+  background: #f6fbff;
+  color: var(--text);
+}
+
+body.light .cortex-panel,
+body.light .command-panel,
+body.light .matrix-panel,
+body.light .events-panel {
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 44px rgba(47, 78, 96, 0.12);
+}
+
+body.light .brain-map {
+  background:
+    radial-gradient(circle at 31% 48%, rgba(201, 149, 33, 0.13), transparent 28%),
+    radial-gradient(circle at 72% 42%, rgba(12, 174, 159, 0.13), transparent 30%),
+    linear-gradient(rgba(16, 36, 51, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(16, 36, 51, 0.06) 1px, transparent 1px),
+    #f7fbff;
+  background-size: 42px 42px;
+}
+
+body.light #cortexCanvas {
+  background: radial-gradient(circle at 50% 50%, rgba(22, 119, 199, 0.07), transparent 48%);
+}
+
+body.light textarea,
+body.light .answer-box,
+body.light .fabric-row,
+body.light .route-row,
+body.light .event,
+body.light .pipeline,
+body.light .pipeline > div {
+  background-color: #f8fbfe;
+  color: var(--text);
+}
+
+body.light .answer-box {
+  border-color: #bfd2df;
+  color: #233d50;
+}
+
+body.light .pipeline {
+  background:
+    linear-gradient(180deg, rgba(22, 119, 199, 0.07), rgba(255, 255, 255, 0.88)),
+    #ffffff;
+}
+
+body.light .pipeline > div.active {
+  background:
+    radial-gradient(circle at 22px 50%, rgba(22, 119, 199, 0.19), transparent 48px),
+    #eef7ff;
+}
+
+body.light .pipeline > div.complete {
+  background:
+    radial-gradient(circle at 22px 50%, rgba(12, 174, 159, 0.22), transparent 48px),
+    #edf9f7;
+}
+
+body.light footer strong,
+body.light .status-chip small,
+body.light .brand p {
+  color: var(--muted);
+}
+
 @keyframes dash {
   to {
     stroke-dashoffset: -36;
@@ -1009,7 +1121,7 @@ footer strong {
   }
 
   #cortexCanvas {
-    height: 350px;
+    height: 390px;
   }
 
   .cortex-labels {
