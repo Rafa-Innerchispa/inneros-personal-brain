@@ -35,6 +35,17 @@
         </div>
 
         <div class="brain-map">
+          <canvas id="cortexCanvas" aria-label="Live 3D cognitive flow visualization"></canvas>
+          <div class="cortex-labels" aria-label="Cognitive components">
+            <div class="cortex-chip local-chip" data-tech="inneros_mcp"><b>InnerOS / Ralphi</b><span>local coordination</span></div>
+            <div class="cortex-chip qwen-chip" data-tech="local_model"><b>Qwen / vLLM</b><span>local synthesis</span></div>
+            <div class="cortex-chip govern-chip" data-tech="govern"><b>Govern</b><span>policy gate</span></div>
+            <div class="cortex-chip docker-chip" data-tech="docker"><b>Docker</b><span>bounded action</span></div>
+            <div class="cortex-chip strands-chip" data-tech="strands"><b>Strands</b><span>router</span></div>
+            <div class="cortex-chip cognee-chip" data-tech="cognee"><b>Cognee</b><span>shared graph</span></div>
+            <div class="cortex-chip brightdata-chip" data-tech="brightdata"><b>Bright Data</b><span>live web</span></div>
+            <div class="cortex-chip bridge-chip" data-tech="bridge"><b>Curated Bridge</b><span>verified sync</span></div>
+          </div>
           <svg id="brainSvg" viewBox="0 0 1220 680" role="img" aria-label="Two brain architecture: InnerOS private local brain, Cognee shared memory brain, curated bridge, Bright Data observation, Strands orchestration and governed local action">
             <defs>
               <filter id="softGlow"><feGaussianBlur stdDeviation="5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>

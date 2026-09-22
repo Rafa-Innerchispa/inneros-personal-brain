@@ -42,6 +42,29 @@ let seq = 0;
 let activeRouteMode = "auto";
 let stageQueue = [];
 let stageTimer = null;
+let cortex = null;
+
+const cortexNodes = {
+  inneros_mcp: { x: 0.19, y: 0.52, color: "#e7c268", label: "InnerOS" },
+  local_model: { x: 0.31, y: 0.32, color: "#9c8cff", label: "Qwen" },
+  govern: { x: 0.30, y: 0.70, color: "#e7c268", label: "Govern" },
+  docker: { x: 0.43, y: 0.76, color: "#e98973", label: "Docker" },
+  strands: { x: 0.50, y: 0.49, color: "#80c7ff", label: "Strands" },
+  cognee: { x: 0.69, y: 0.52, color: "#67e6d2", label: "Cognee" },
+  brightdata: { x: 0.84, y: 0.27, color: "#57c7ff", label: "Bright Data" },
+  bridge: { x: 0.50, y: 0.88, color: "#8de6a5", label: "Bridge" },
+};
+
+const cortexFlows = {
+  strands: ["strands", "cognee"],
+  cognee: ["cognee", "strands"],
+  brightdata: ["brightdata", "strands"],
+  local_model: ["strands", "local_model"],
+  govern: ["strands", "govern"],
+  docker: ["govern", "docker"],
+  bridge: ["cognee", "bridge"],
+  inneros_mcp: ["inneros_mcp", "strands"],
+};
 
 function $(id) {
   return document.getElementById(id);
@@ -64,11 +87,234 @@ function stateClass(state) {
   return "optional";
 }
 
+function setupCortex() {
+  const canvas = $("cortexCanvas");
+  if (!canvas) return;
+  cortex = {
+    canvas,
+    ctx: canvas.getContext("2d"),
+    dpr: Math.max(1, Math.min(window.devicePixelRatio || 1, 2)),
+    activeTech: "",
+    activeStage: "",
+    lastTech: "",
+    particles: [],
+    startedAt: performance.now(),
+  };
+  resizeCortex();
+  window.addEventListener("resize", resizeCortex);
+  requestAnimationFrame(drawCortex);
+}
+
+function resizeCortex() {
+  if (!cortex) return;
+  const rect = cortex.canvas.getBoundingClientRect();
+  cortex.dpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
+  cortex.canvas.width = Math.max(1, Math.floor(rect.width * cortex.dpr));
+  cortex.canvas.height = Math.max(1, Math.floor(rect.height * cortex.dpr));
+}
+
+function nodePoint(key) {
+  const n = cortexNodes[key] || cortexNodes.strands;
+  return {
+    x: n.x * cortex.canvas.width,
+    y: n.y * cortex.canvas.height,
+    color: n.color,
+  };
+}
+
+function spawnFlow(tech, count = 7) {
+  if (!cortex) return;
+  const flow = cortexFlows[tech] || cortexFlows.strands;
+  for (let i = 0; i < count; i += 1) {
+    cortex.particles.push({
+      from: flow[0],
+      to: flow[1],
+      t: -i * 0.08,
+      speed: 0.011 + Math.random() * 0.009,
+      size: 2.2 + Math.random() * 2.4,
+      color: cortexNodes[tech]?.color || "#80c7ff",
+    });
+  }
+}
+
+function drawBlob(ctx, cx, cy, rx, ry, palette, active, label) {
+  ctx.save();
+  const wobble = (performance.now() - cortex.startedAt) / 1000;
+  const glow = active ? 0.95 : 0.34;
+  const shell = ctx.createRadialGradient(cx - rx * 0.35, cy - ry * 0.45, 8, cx, cy, rx * 1.14);
+  shell.addColorStop(0, palette.hot);
+  shell.addColorStop(0.38, palette.mid);
+  shell.addColorStop(1, palette.dark);
+  ctx.shadowColor = palette.hot;
+  ctx.shadowBlur = active ? 34 : 15;
+  ctx.beginPath();
+  for (let i = 0; i <= 96; i += 1) {
+    const a = (Math.PI * 2 * i) / 96;
+    const folded = 1 + Math.sin(a * 5 + wobble * 0.9) * 0.035 + Math.cos(a * 3 - wobble * 0.45) * 0.04;
+    const x = cx + Math.cos(a) * rx * folded;
+    const y = cy + Math.sin(a) * ry * (1 + Math.cos(a * 4) * 0.035);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fillStyle = shell;
+  ctx.globalAlpha = 0.9;
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = active ? 3.8 : 2.4;
+  ctx.strokeStyle = palette.edge;
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.globalAlpha = 0.46 + glow * 0.28;
+  for (let i = -2; i <= 2; i += 1) {
+    ctx.beginPath();
+    ctx.ellipse(cx + i * rx * 0.18, cy + Math.sin(i + wobble) * 8, rx * (0.42 - Math.abs(i) * 0.035), ry * 0.72, i * 0.22, 0, Math.PI * 2);
+    ctx.strokeStyle = palette.fold;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  if (cortex.canvas.width > 620) {
+    ctx.fillStyle = "#dcecf1";
+    ctx.font = `900 ${Math.max(12, Math.floor(rx * 0.08))}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(label, cx, cy - ry - 22);
+  }
+  ctx.restore();
+}
+
+function drawConnection(ctx, fromKey, toKey, activeColor, active) {
+  const from = nodePoint(fromKey);
+  const to = nodePoint(toKey);
+  const mx = (from.x + to.x) / 2;
+  const my = (from.y + to.y) / 2 - cortex.canvas.height * 0.08;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.quadraticCurveTo(mx, my, to.x, to.y);
+  ctx.strokeStyle = active ? activeColor : "rgba(196, 222, 231, 0.18)";
+  ctx.lineWidth = active ? 3.2 : 1.3;
+  ctx.setLineDash(active ? [10, 10] : [5, 11]);
+  ctx.lineDashOffset = -((performance.now() - cortex.startedAt) / 24);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawNode(ctx, key) {
+  const p = nodePoint(key);
+  const active = cortex.activeTech === key || cortex.lastTech === key;
+  ctx.save();
+  ctx.shadowColor = p.color;
+  ctx.shadowBlur = active ? 24 : 10;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, active ? 12 : 8, 0, Math.PI * 2);
+  ctx.fillStyle = p.color;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, active ? 23 : 16, 0, Math.PI * 2);
+  ctx.strokeStyle = active ? p.color : "rgba(210, 237, 246, 0.28)";
+  ctx.lineWidth = active ? 2.5 : 1.2;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawParticles(ctx) {
+  cortex.particles = cortex.particles.filter((particle) => particle.t < 1.08);
+  for (const particle of cortex.particles) {
+    particle.t += particle.speed;
+    if (particle.t < 0) continue;
+    const from = nodePoint(particle.from);
+    const to = nodePoint(particle.to);
+    const t = Math.min(1, particle.t);
+    const curve = Math.sin(t * Math.PI);
+    const x = from.x + (to.x - from.x) * t;
+    const y = from.y + (to.y - from.y) * t - curve * cortex.canvas.height * 0.08;
+    ctx.save();
+    ctx.shadowColor = particle.color;
+    ctx.shadowBlur = 18;
+    ctx.beginPath();
+    ctx.arc(x, y, particle.size, 0, Math.PI * 2);
+    ctx.fillStyle = particle.color;
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawCortex() {
+  if (!cortex) return;
+  const ctx = cortex.ctx;
+  const w = cortex.canvas.width;
+  const h = cortex.canvas.height;
+  const time = (performance.now() - cortex.startedAt) / 1000;
+
+  ctx.clearRect(0, 0, w, h);
+  const bg = ctx.createLinearGradient(0, 0, w, h);
+  bg.addColorStop(0, "#061018");
+  bg.addColorStop(0.54, "#081723");
+  bg.addColorStop(1, "#050c12");
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = "#33576b";
+  ctx.lineWidth = 1;
+  const grid = Math.max(42, w / 24);
+  for (let x = 0; x < w; x += grid) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+  for (let y = 0; y < h; y += grid) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  const localActive = ["inneros_mcp", "local_model", "govern", "docker"].includes(cortex.activeTech);
+  const sharedActive = ["cognee", "brightdata", "bridge"].includes(cortex.activeTech);
+  drawBlob(ctx, w * 0.30, h * 0.50 + Math.sin(time * 0.9) * 3, w * 0.18, h * 0.27, {
+    hot: "rgba(255, 210, 106, 0.92)",
+    mid: "rgba(255, 143, 111, 0.54)",
+    dark: "rgba(19, 17, 28, 0.86)",
+    edge: localActive ? "#ffd26a" : "rgba(231, 194, 104, 0.78)",
+    fold: "rgba(255, 235, 177, 0.48)",
+  }, localActive, "INNEROS LOCAL BRAIN");
+  drawBlob(ctx, w * 0.72, h * 0.49 + Math.cos(time * 0.8) * 3, w * 0.20, h * 0.29, {
+    hot: "rgba(103, 230, 210, 0.94)",
+    mid: "rgba(68, 227, 189, 0.46)",
+    dark: "rgba(8, 26, 37, 0.9)",
+    edge: sharedActive ? "#67e6d2" : "rgba(103, 230, 210, 0.78)",
+    fold: "rgba(194, 255, 245, 0.45)",
+  }, sharedActive, "COGNEE SHARED MEMORY");
+
+  const activeFlow = cortexFlows[cortex.activeTech] || [];
+  Object.entries(cortexFlows).forEach(([tech, flow]) => {
+    drawConnection(ctx, flow[0], flow[1], cortexNodes[tech]?.color || "#80c7ff", activeFlow[0] === flow[0] && activeFlow[1] === flow[1]);
+  });
+  Object.keys(cortexNodes).forEach((key) => drawNode(ctx, key));
+  drawParticles(ctx);
+
+  if (w > 620) {
+    ctx.save();
+    ctx.fillStyle = "rgba(236, 244, 248, 0.82)";
+    ctx.font = `800 ${Math.max(11, Math.floor(w / 96))}px Inter, system-ui, sans-serif`;
+    ctx.textAlign = "center";
+    ctx.fillText(cortex.activeStage ? `LIVE STAGE: ${cortex.activeStage.toUpperCase()}` : "WAITING FOR LIVE ROUTE", w * 0.50, h * 0.16);
+    ctx.restore();
+  }
+  requestAnimationFrame(drawCortex);
+}
+
 function setRegionState(key, state) {
-  const region = $("region-" + key);
-  if (!region) return;
-  region.classList.remove("ready", "pending", "blocked", "active", "complete", "error");
-  region.classList.add(stateClass(state));
+  document.querySelectorAll(`#region-${key}, [data-tech="${key}"]`).forEach((region) => {
+    region.classList.remove("ready", "pending", "blocked", "active", "complete", "error");
+    region.classList.add(stateClass(state));
+  });
 }
 
 function renderFabric(fabric) {
@@ -148,31 +394,42 @@ async function loadStatus() {
 }
 
 function clearAnimation() {
-  document.querySelectorAll(".brain-segment,.bridge-segment").forEach((item) => {
+  document.querySelectorAll(".brain-segment,.bridge-segment,.cortex-chip").forEach((item) => {
     item.classList.remove("active", "complete", "error");
   });
   document.querySelectorAll(".flow-rails path").forEach((item) => item.classList.remove("flowing"));
   document.querySelectorAll(".pipeline [data-step]").forEach((item) => item.classList.remove("active"));
+  if (cortex) {
+    cortex.activeTech = "";
+    cortex.activeStage = "";
+    cortex.lastTech = "";
+  }
 }
 
 function activateStage(stage, technology, state, message) {
   const tech = technology || stageTech[stage] || "strands";
   const meta = techMeta[tech] || { name: tech, role: "" };
-  const region = $("region-" + tech) || $("region-" + stage);
+  const regions = document.querySelectorAll(`#region-${tech}, #region-${stage}, [data-tech="${tech}"]`);
   const flow = $(meta.flow || "flow-strands");
   const step = document.querySelector(`[data-step="${stage}"]`);
 
-  document.querySelectorAll(".brain-segment,.bridge-segment").forEach((item) => {
+  document.querySelectorAll(".brain-segment,.bridge-segment,.cortex-chip").forEach((item) => {
     item.classList.remove("active", "error");
   });
   document.querySelectorAll(".flow-rails path").forEach((item) => item.classList.remove("flowing"));
   document.querySelectorAll(".pipeline [data-step]").forEach((item) => item.classList.remove("active"));
 
-  if (region) {
+  regions.forEach((region) => {
     region.classList.add(state === "error" ? "error" : state === "complete" ? "complete" : "active");
-  }
+  });
   if (flow) flow.classList.add("flowing");
   if (step) step.classList.add("active");
+  if (cortex) {
+    cortex.activeTech = tech;
+    cortex.activeStage = stage;
+    cortex.lastTech = tech;
+    if (state === "active") spawnFlow(tech, stage === "reason" ? 11 : 7);
+  }
 
   $("cognitiveState").textContent = "COGNITIVE STATE · " + String(stage).toUpperCase();
   $("modePill").textContent = state === "active" ? "PROCESSING" : "STAGE COMPLETE";
@@ -216,6 +473,11 @@ function resetRunUi() {
   $("answer").textContent = "Live cognitive trace running...";
   $("metrics").innerHTML = "<span>MEM ...</span><span>WEB ...</span><span>ACTIONS ...</span>";
   $("evidenceSummary").textContent = "Backend stream is active.";
+  if (cortex) {
+    cortex.activeTech = "strands";
+    cortex.activeStage = "input";
+    spawnFlow("strands", 9);
+  }
 }
 
 function renderResult(data) {
@@ -312,5 +574,6 @@ document.querySelectorAll("[data-route]").forEach((button) => {
   });
 });
 
+setupCortex();
 loadStatus();
 setInterval(loadStatus, 15000);

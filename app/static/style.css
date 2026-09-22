@@ -198,8 +198,8 @@ h1 {
   border: 1px solid rgba(63, 107, 130, 0.42);
   border-radius: 8px;
   background:
-    radial-gradient(circle at 38% 44%, rgba(128, 199, 255, 0.1), transparent 26%),
-    radial-gradient(circle at 73% 44%, rgba(103, 230, 210, 0.09), transparent 28%),
+    radial-gradient(circle at 34% 45%, rgba(231, 194, 104, 0.12), transparent 28%),
+    radial-gradient(circle at 72% 42%, rgba(103, 230, 210, 0.13), transparent 30%),
     linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
     #08131d;
@@ -218,11 +218,94 @@ h1 {
 }
 
 #brainSvg {
+  display: none;
+}
+
+#cortexCanvas {
   position: relative;
   z-index: 1;
+  display: block;
   width: 100%;
   height: 528px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.035), transparent 45%);
+}
+
+.cortex-labels {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 528px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.cortex-chip {
+  position: absolute;
+  min-width: 132px;
+  padding: 8px 10px;
+  border: 1px solid rgba(142, 188, 211, 0.32);
+  border-radius: 8px;
+  background: rgba(6, 16, 24, 0.78);
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+  transform: translate(-50%, -50%);
+  transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.cortex-chip b,
+.cortex-chip span {
   display: block;
+  text-align: center;
+}
+
+.cortex-chip b {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.cortex-chip span {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.cortex-chip.active {
+  border-color: var(--blue);
+  background: rgba(17, 42, 63, 0.86);
+  box-shadow: 0 0 26px rgba(128, 199, 255, 0.4);
+}
+
+.cortex-chip.complete {
+  border-color: var(--green);
+  box-shadow: 0 0 22px rgba(141, 230, 165, 0.28);
+}
+
+.cortex-chip.error {
+  border-color: var(--red);
+  box-shadow: 0 0 22px rgba(255, 111, 127, 0.3);
+}
+
+.local-chip { left: 19%; top: 52%; }
+.qwen-chip { left: 31%; top: 32%; }
+.govern-chip { left: 30%; top: 70%; }
+.docker-chip { left: 43%; top: 76%; }
+.strands-chip { left: 50%; top: 49%; }
+.cognee-chip { left: 69%; top: 52%; }
+.brightdata-chip { left: 84%; top: 27%; }
+.bridge-chip { left: 50%; top: 88%; }
+
+.brain-title-overlay {
+  position: absolute;
+  z-index: 2;
+  top: 56px;
+  color: #d8eef4;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .brain-backdrop {
@@ -839,13 +922,15 @@ footer strong {
   }
 
   .brain-map {
-    min-height: 430px;
+    min-height: 520px;
   }
 
-  #brainSvg {
-    height: 385px;
-    width: 1280px;
-    transform: translateX(-210px);
+  #cortexCanvas {
+    height: 470px;
+  }
+
+  .cortex-labels {
+    height: 470px;
   }
 
   .brain-legend {
@@ -854,9 +939,37 @@ footer strong {
     max-width: none;
   }
 
+  .cortex-chip {
+    min-width: 108px;
+    padding: 6px 7px;
+  }
+
+  .cortex-chip b {
+    font-size: 9px;
+  }
+
+  .cortex-chip span {
+    font-size: 8px;
+  }
+
+  .local-chip { left: 18%; top: 52%; }
+  .qwen-chip { left: 28%; top: 30%; }
+  .govern-chip { left: 26%; top: 72%; }
+  .docker-chip { left: 45%; top: 76%; }
+  .strands-chip { left: 50%; top: 49%; }
+  .cognee-chip { left: 73%; top: 53%; }
+  .brightdata-chip { left: 78%; top: 25%; }
+  .bridge-chip { left: 50%; top: 82%; }
+
   .agents-strip,
   .pipeline {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .agents-strip {
+    position: static;
+    padding: 0 10px 12px;
+    margin-top: 2px;
   }
 
   .route-controls {
