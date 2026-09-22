@@ -677,20 +677,23 @@ class PersonalBrain:
             return str(result), usage
         except Exception as exc:
             if context:
-                evidence_lines = [
-                    line.strip()
-                    for line in context.splitlines()
-                    if line.strip()
-                    and "temporarily unavailable" not in line.lower()
-                    and "no high-confidence public organic" not in line.lower()
-                ][:5]
-                bullets = "\n".join(f"- {line[:260]}" for line in evidence_lines)
+                has_memory = any(line.startswith("MEMORY:") for line in context.splitlines())
+                web_count = sum(1 for line in context.splitlines() if line.startswith("WEB:"))
+                request_summary = prompt.replace("\n", " ").strip()[:240]
                 return (
-                    "I used the available evidence and produced a deterministic summary because "
-                    "the model/orchestration route was temporarily unavailable.\n\n"
-                    f"Evidence used:\n{bullets or '- No reliable evidence lines were available.'}\n\n"
-                    "Next step: verify the listed sources and use Think + Act only when you want "
-                    "a sandbox artifact/proof generated from this reasoning.\n\n"
+                    "Deterministic fallback summary.\n\n"
+                    f"Request: {request_summary}\n\n"
+                    "What I can say safely:\n"
+                    "- InnerOS Personal Brain combines Cognee memory, Bright Data web context, "
+                    "Strands/Qwen reasoning, and Docker Sandbox execution evidence.\n"
+                    "- I will not treat unrelated same-name web results as identity evidence.\n"
+                    "- If Think + Act was selected, the verified Docker result is reported separately "
+                    "under ACTION RESULT.\n\n"
+                    "Evidence status:\n"
+                    f"- Cognee memory: {'available' if has_memory else 'not available for this run'}.\n"
+                    f"- Bright Data web items considered: {web_count}.\n"
+                    "- Model/orchestration route: degraded, so this answer is a deterministic summary "
+                    "instead of a full Qwen synthesis.\n\n"
                     f"[Strands fallback: {type(exc).__name__}]"
                 )
             return (
