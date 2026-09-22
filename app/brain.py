@@ -453,18 +453,28 @@ class PersonalBrain:
     async def _reason(self, prompt: str, context: str) -> str:
         try:
             from strands import Agent, tool
-            from strands.models.openai import OpenAIModel
+            from strands.models.openai import OpenAIModel as BaseOpenAIModel
+
+            class VLLMCompatibleOpenAIModel(BaseOpenAIModel):
+                def format_request(self, *args, **kwargs):
+                    request = super().format_request(*args, **kwargs)
+                    if not request.get("tools"):
+                        request.pop("tools", None)
+                        if request.get("tool_choice") == "auto":
+                            request.pop("tool_choice", None)
+                    return request
 
             @tool
             def evidence_marker(value: str = "ok") -> str:
                 """Return a harmless marker for OpenAI-compatible tool schemas."""
                 return value
 
+            native_tool_calling = os.getenv("STRANDS_NATIVE_TOOL_CALLING", "0") == "1"
             cognee_agent_memory = CogneeAgentMemoryTools()
             cognee_memory_store = CogneeMemoryStore()
-            memory_tools = cognee_agent_memory.build()
+            memory_tools = cognee_agent_memory.build() if native_tool_calling else []
 
-            model = OpenAIModel(
+            model = VLLMCompatibleOpenAIModel(
                 client_args={
                     "api_key": os.getenv("LOCAL_LLM_API_KEY", "local"),
                     "base_url": os.getenv("LOCAL_LLM_BASE_URL", "http://127.0.0.1:8000/v1"),
@@ -474,21 +484,31 @@ class PersonalBrain:
                     "QuantTrio/Qwen3-Coder-30B-A3B-Instruct-AWQ",
                 ),
             )
+            system_prompt = (
+                "You are InnerOS Personal Brain. Cognee is your durable shared memory. "
+                "Use the supplied memory and live-web evidence. Be concise and distinguish "
+                "remembered facts from live findings. Historical memories can describe older "
+                "execution failures; treat those only as historical. Do not predict or describe "
+                "the outcome of the current action because execution happens after reasoning and "
+                "the verified executor result will be appended separately."
+            )
+            tools = [evidence_marker, *memory_tools] if native_tool_calling else None
+            if native_tool_calling:
+                system_prompt += (
+                    " When Cognee tools are available, call cognee_recall before answering any "
+                    "question about prior projects, decisions, preferences, architecture, or earlier "
+                    "outcomes. Use cognee_remember only for durable verified facts, explicit remember "
+                    "requests, or verified outcomes; never store credentials or raw untrusted web text."
+                )
+            else:
+                system_prompt += (
+                    " Cognee recall and remember are executed by the backend adapter before and after "
+                    "Strands reasoning, so do not ask for tools."
+                )
             agent = Agent(
                 model=model,
-                tools=[evidence_marker, *memory_tools],
-                system_prompt=(
-                    "You are InnerOS Personal Brain. Cognee is your durable shared memory. "
-                    "When Cognee tools are available, call cognee_recall before answering any question "
-                    "about prior projects, decisions, preferences, architecture, or earlier outcomes. "
-                    "Use cognee_remember only for durable verified facts, explicit remember requests, "
-                    "or verified outcomes; never store credentials or raw untrusted web text. "
-                    "Use the supplied memory and live-web evidence too. Be concise and distinguish "
-                    "remembered facts from live findings. Historical memories can describe older "
-                    "execution failures; treat those only as historical. Do not predict or describe "
-                    "the outcome of the current action because execution happens after reasoning and "
-                    "the verified executor result will be appended separately."
-                ),
+                tools=tools,
+                system_prompt=system_prompt,
             )
             result = agent(
                 f"USER REQUEST:\n{prompt}\n\n"
@@ -499,6 +519,7 @@ class PersonalBrain:
             usage = cognee_agent_memory.usage()
             usage["memory_manager"] = cognee_memory_store.status()
             usage["memory_injection_count"] = context.count("MEMORY:")
+            usage["strands_native_tool_calling"] = native_tool_calling
             return str(result), usage
         except Exception as exc:
             if context:

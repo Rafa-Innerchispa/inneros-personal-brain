@@ -6,12 +6,14 @@
   --line-strong: #3f6b82;
   --text: #ecf4f8;
   --muted: #8ea1ad;
-  --blue: #66b7ff;
-  --teal: #4ce0ba;
-  --amber: #f2c15f;
-  --coral: #ff8f6f;
-  --green: #6ee79a;
+  --blue: #80c7ff;
+  --teal: #67e6d2;
+  --amber: #e7c268;
+  --coral: #e98973;
+  --green: #8de6a5;
   --red: #ff6f7f;
+  --steel: #9fb4c0;
+  --iridium: #9c8cff;
 }
 
 * {
@@ -196,8 +198,10 @@ h1 {
   border: 1px solid rgba(63, 107, 130, 0.42);
   border-radius: 8px;
   background:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px),
+    radial-gradient(circle at 38% 44%, rgba(128, 199, 255, 0.1), transparent 26%),
+    radial-gradient(circle at 73% 44%, rgba(103, 230, 210, 0.09), transparent 28%),
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px),
     #08131d;
   background-size: 42px 42px;
   overflow: hidden;
@@ -207,7 +211,9 @@ h1 {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, rgba(76, 224, 186, 0.1), transparent 36%, rgba(242, 193, 95, 0.1));
+  background:
+    linear-gradient(90deg, rgba(103, 230, 210, 0.09), transparent 36%, rgba(231, 194, 104, 0.09)),
+    linear-gradient(180deg, rgba(255,255,255,0.04), transparent 42%);
   pointer-events: none;
 }
 
@@ -280,8 +286,9 @@ h1 {
 }
 
 .memory-segment path {
-  fill: rgba(27, 183, 215, 0.7);
-  stroke: #66f3df;
+  fill: url(#memoryFill);
+  fill-opacity: 0.72;
+  stroke: #86f3e6;
 }
 
 .memory-segment circle {
@@ -290,18 +297,21 @@ h1 {
 }
 
 .local-segment path {
-  fill: rgba(242, 193, 95, 0.72);
-  stroke: #ffd26a;
+  fill: url(#localFill);
+  fill-opacity: 0.68;
+  stroke: #f1cf83;
 }
 
 .observe-segment path {
-  fill: rgba(87, 199, 255, 0.68);
-  stroke: #86dbff;
+  fill: url(#observeFill);
+  fill-opacity: 0.7;
+  stroke: #9bdcff;
 }
 
 .strands-segment path {
-  fill: rgba(157, 136, 255, 0.66);
-  stroke: #c7bcff;
+  fill: url(#strandsFill);
+  fill-opacity: 0.7;
+  stroke: #c9c0ff;
 }
 
 .strands-segment circle {
@@ -310,18 +320,20 @@ h1 {
 }
 
 .reason-segment path {
-  fill: rgba(91, 121, 255, 0.68);
-  stroke: #b499ff;
+  fill: url(#reasonFill);
+  fill-opacity: 0.72;
+  stroke: #b8adff;
 }
 
 .govern-segment path {
-  fill: rgba(170, 114, 255, 0.68);
-  stroke: #d0b8ff;
+  fill: rgba(126, 111, 204, 0.74);
+  stroke: #d2cbff;
 }
 
 .action-segment path {
-  fill: rgba(255, 143, 111, 0.72);
-  stroke: #ffc0a8;
+  fill: url(#actionFill);
+  fill-opacity: 0.72;
+  stroke: #f2b3a4;
 }
 
 .bridge-segment path {
@@ -343,7 +355,7 @@ h1 {
 .outer-connectors text {
   fill: var(--text);
   font-size: 18px;
-  font-weight: 850;
+  font-weight: 900;
   text-anchor: middle;
   pointer-events: none;
 }
@@ -356,9 +368,9 @@ h1 {
 }
 
 .brain-segment .micro {
-  fill: rgba(236, 244, 248, 0.82);
+  fill: rgba(236, 244, 248, 0.86);
   font-size: 10px;
-  font-weight: 800;
+  font-weight: 850;
 }
 
 .outer-connectors rect {
@@ -404,7 +416,7 @@ h1 {
 .active rect,
 .active circle {
   stroke: var(--blue);
-  filter: url(#hardGlow);
+  filter: url(#hardGlow) saturate(1.15);
 }
 
 .complete path,

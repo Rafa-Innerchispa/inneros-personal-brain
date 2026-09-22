@@ -40,6 +40,8 @@ const stageTech = {
 let statuses = {};
 let seq = 0;
 let activeRouteMode = "auto";
+let stageQueue = [];
+let stageTimer = null;
 
 function $(id) {
   return document.getElementById(id);
@@ -177,6 +179,21 @@ function activateStage(stage, technology, state, message) {
   addEvent(meta.name, state, message || meta.role);
 }
 
+function enqueueStage(event) {
+  stageQueue.push(event);
+  if (stageTimer) return;
+  const pump = () => {
+    const next = stageQueue.shift();
+    if (next) {
+      activateStage(next.stage, next.technology, next.state, next.message);
+      stageTimer = setTimeout(pump, next.state === "active" ? 720 : 520);
+      return;
+    }
+    stageTimer = null;
+  };
+  pump();
+}
+
 function addEvent(title, state, message) {
   seq += 1;
   const article = document.createElement("article");
@@ -190,6 +207,11 @@ function addEvent(title, state, message) {
 
 function resetRunUi() {
   seq = 0;
+  stageQueue = [];
+  if (stageTimer) {
+    clearTimeout(stageTimer);
+    stageTimer = null;
+  }
   $("eventStream").innerHTML = "";
   $("answer").textContent = "Live cognitive trace running...";
   $("metrics").innerHTML = "<span>MEM ...</span><span>WEB ...</span><span>ACTIONS ...</span>";
@@ -198,19 +220,28 @@ function resetRunUi() {
 
 function renderResult(data) {
   const webHits = data.web_hits || [];
+  const memoryHits = data.memory_hits || [];
+  const actions = data.actions || [];
   const replay = webHits.some((item) => item.metadata && item.metadata.verified_replay);
   const route = data.route || {};
+  const whoAnswered = [
+    `STRANDS ROUTER: ${route.routing_reason || "Selected the route and ordered the tools."}`,
+    `COGNEE MEMORY: ${memoryHits.length ? `${memoryHits.length} recalled item(s) from ${route.evidence_refs?.cognee_dataset || "dataset"}.` : "not used for this route."}`,
+    `BRIGHT DATA: ${webHits.length ? `${webHits.length} ${replay ? "verified replay" : "live"} result(s).` : "not used for this route."}`,
+    `QWEN / VLLM: ${route.final_answer_model || "local model"} synthesized the final answer.`,
+    `DOCKER: ${actions.length ? `${actions.length} action(s), latest ${actions[actions.length - 1]?.status || "unknown"}.` : "no action requested."}`,
+    route.fallback_active ? `FALLBACK: ACTIVE ${route.fallback_reason || ""}` : "FALLBACK: inactive"
+  ].join("\n");
   const routeLines = [
     `ROUTE ${String(route.route_mode || activeRouteMode).toUpperCase()} · ${String(route.route_policy || "unknown").toUpperCase()}`,
-    `ORCHESTRATOR ${route.orchestrator || "unknown"} · FINAL MODEL ${route.final_answer_model || "unknown"}`,
     `USED ${(route.sources_used || []).join(", ") || "none"} · SKIPPED ${(route.sources_not_used || []).join(", ") || "none"}`,
-    route.fallback_active ? `FALLBACK ACTIVE ${route.fallback_reason || ""}` : "FALLBACK inactive"
+    `STAGES ${(route.stages_executed || []).join(" -> ") || "not reported"}`
   ].join("\n");
-  $("answer").textContent = `${routeLines}\n\n${data.answer || "Completed without textual answer."}`;
+  $("answer").textContent = `${whoAnswered}\n\n${routeLines}\n\nFINAL ANSWER\n${data.answer || "Completed without textual answer."}`;
   $("metrics").innerHTML = `
-    <span>MEM ${(data.memory_hits || []).length}</span>
+    <span>MEM ${memoryHits.length}</span>
     <span>WEB ${webHits.length}${replay ? " REPLAY" : " LIVE"}</span>
-    <span>ACTIONS ${(data.actions || []).length}</span>
+    <span>ACTIONS ${actions.length}</span>
   `;
   $("evidenceSummary").textContent = replay
     ? "Bright Data fallback is clearly labeled as verified replay."
@@ -229,7 +260,7 @@ async function runBrain(act) {
   stream.onmessage = (event) => {
     const data = JSON.parse(event.data);
     if (data.type === "stage") {
-      activateStage(data.stage, data.technology, data.state, data.message);
+      enqueueStage(data);
     } else if (data.type === "result") {
       renderResult(data);
     } else if (data.type === "error") {
