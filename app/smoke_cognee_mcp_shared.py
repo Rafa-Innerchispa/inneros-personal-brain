@@ -80,8 +80,8 @@ def main() -> int:
                 "params": {
                     "name": "recall",
                     "arguments": {
-                        "query_text": "What does InnerOS Personal Brain remember about Physical Guardian, VoiceOps, and the Battle of the Personal Brains demo?",
-                        "datasets": ["inneros-personal-brain"],
+                        "query": "What does InnerOS Personal Brain remember about Physical Guardian, VoiceOps, and the Battle of the Personal Brains demo?",
+                        "datasets": "inneros-personal-brain",
                         "top_k": 6,
                     },
                 },
@@ -92,11 +92,12 @@ def main() -> int:
         result = recall_body.get("result") if isinstance(recall_body, dict) else None
 
     serialized = json.dumps(result, ensure_ascii=False, default=str)
+    is_error = bool((result or {}).get("isError")) if isinstance(result, dict) else False
     out = {
-        "ok": all(name in names for name in ("remember", "recall", "forget")),
+        "ok": all(name in names for name in ("remember", "recall", "forget")) and not is_error,
         "session": bool(session),
         "tools": names,
-        "recall_has_content": bool(serialized and serialized != "null"),
+        "recall_has_content": bool(serialized and serialized != "null" and not is_error),
         "recall_preview": serialized[:3500],
     }
     print(json.dumps(out, ensure_ascii=False, indent=2))
