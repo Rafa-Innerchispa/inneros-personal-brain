@@ -47,6 +47,28 @@ class PersonalBrain:
         return any(marker in text for marker in markers)
 
     @staticmethod
+    def _is_owner_identity_query(prompt: str) -> bool:
+        text = f" {prompt.lower()} "
+        markers = (
+            "who am i",
+            "quien soy",
+            "quién soy",
+            "rafael lopez",
+            "rafael lópez",
+            "ralphi",
+            "sobre mi",
+            "sobre mí",
+        )
+        return any(marker in text for marker in markers)
+
+    @staticmethod
+    def _public_identity_query() -> str:
+        return os.getenv(
+            "PUBLIC_IDENTITY_SEARCH_QUERY",
+            "Rafael Lopez Ralphi IA InnerChispa PC Doctor InnerOS",
+        )
+
+    @staticmethod
     def _needs_live_web(prompt: str) -> bool:
         text = f" {prompt.lower()} "
         markers = (
@@ -73,7 +95,9 @@ class PersonalBrain:
     def _plan_route(self, prompt: str, route_mode: str | None) -> dict:
         mode = self._normalize_route_mode(route_mode)
         personal = self._is_identity_or_memory_query(prompt)
+        owner_identity = self._is_owner_identity_query(prompt)
         needs_web = self._needs_live_web(prompt)
+        web_query = prompt
         if mode == "local_only":
             use_memory = False
             use_web = False
@@ -86,14 +110,17 @@ class PersonalBrain:
             reason = "Forced live-web route through Bright Data."
         elif mode == "memory_first":
             use_memory = True
-            use_web = needs_web and not personal
+            use_web = needs_web or owner_identity
             policy = "memory_first"
-            reason = "Memory-first route; Bright Data only when the prompt asks for current public web context."
-        elif personal and not needs_web:
+            reason = "Memory-first route; Bright Data is added for public owner identity or current web context."
+            if owner_identity:
+                web_query = self._public_identity_query()
+        elif owner_identity:
             use_memory = True
-            use_web = False
-            policy = "identity_memory"
-            reason = "Personal identity/project question: Cognee memory first, no Bright Data by default."
+            use_web = True
+            policy = "identity_memory_web"
+            reason = "Owner identity question: Cognee memory plus Bright Data public identity search, then local Qwen synthesis."
+            web_query = self._public_identity_query()
         else:
             use_memory = True
             use_web = needs_web
@@ -105,7 +132,9 @@ class PersonalBrain:
             "reason": reason,
             "use_memory": use_memory,
             "use_web": use_web,
+            "web_query": web_query,
             "personal_query": personal,
+            "owner_identity_query": owner_identity,
             "live_web_intent": needs_web,
         }
 
@@ -206,7 +235,7 @@ class PersonalBrain:
                 "message": "Searching the live web with Bright Data",
             })
             tool_calls["brightdata_search"] += 1
-            web_hits = await self.web.search(prompt)
+            web_hits = await self.web.search(route["web_query"])
             replay = any(bool(x.metadata.get("verified_replay")) for x in web_hits)
             await self._emit(emit, {
                 "stage": "observe",
@@ -411,6 +440,8 @@ class PersonalBrain:
             "sources_used": [
                 source
                 for source, used in {
+                    "strands_orchestrator": True,
+                    "local_qwen_vllm": True,
                     "cognee_shared_memory": bool(memory_hits),
                     "brightdata_live_web": bool(web_hits),
                     "docker_sandbox": bool(actions),
@@ -436,6 +467,7 @@ class PersonalBrain:
             "fallback_reason": fallback_reason or ("Bright Data verified replay" if replay else ""),
             "evidence_refs": {
                 "cognee_dataset": dataset,
+                "brightdata_query": route["web_query"] if route["use_web"] else "",
                 "web_mode": "verified_replay" if replay else "live" if web_hits else "not_used",
             },
             "routing_reason": route["reason"],

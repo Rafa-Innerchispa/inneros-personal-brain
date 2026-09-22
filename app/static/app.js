@@ -228,6 +228,7 @@ function renderResult(data) {
     `STRANDS ROUTER: ${route.routing_reason || "Selected the route and ordered the tools."}`,
     `COGNEE MEMORY: ${memoryHits.length ? `${memoryHits.length} recalled item(s) from ${route.evidence_refs?.cognee_dataset || "dataset"}.` : "not used for this route."}`,
     `BRIGHT DATA: ${webHits.length ? `${webHits.length} ${replay ? "verified replay" : "live"} result(s).` : "not used for this route."}`,
+    `RALPHI IA / INNEROS: local sovereign fabric is the runtime and coordination layer for this demo.`,
     `QWEN / VLLM: ${route.final_answer_model || "local model"} synthesized the final answer.`,
     `DOCKER: ${actions.length ? `${actions.length} action(s), latest ${actions[actions.length - 1]?.status || "unknown"}.` : "no action requested."}`,
     route.fallback_active ? `FALLBACK: ACTIVE ${route.fallback_reason || ""}` : "FALLBACK: inactive"

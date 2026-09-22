@@ -174,14 +174,16 @@ def test_brightdata_rest_serp_payload_extracts_organic_results():
 
 
 @pytest.mark.asyncio
-async def test_identity_questions_do_not_use_brightdata_in_auto_route():
+async def test_identity_questions_use_cognee_and_brightdata_in_auto_route():
     memory = DemoMemoryAdapter(seed=["Ralphi is building InnerOS Personal Brain for the hackathon."])
     web = NoWeb()
     brain = FastTestBrain(memory=memory, web=web)
 
     result = await brain.answer("quien soy yo y que estamos construyendo?", act=False)
 
-    assert web.calls == 0
+    assert web.calls == 1
+    assert result.memory_hits
     assert result.web_hits == []
-    assert result.route["route_policy"] == "identity_memory"
-    assert "brightdata_live_web" in result.route["sources_not_used"]
+    assert result.route["route_policy"] == "identity_memory_web"
+    assert result.route["evidence_refs"]["brightdata_query"] == "Rafael Lopez Ralphi IA InnerChispa PC Doctor InnerOS"
+    assert "local_qwen_vllm" in result.route["sources_used"]
