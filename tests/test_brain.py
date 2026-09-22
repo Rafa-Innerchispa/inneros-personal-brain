@@ -145,9 +145,11 @@ def test_live_cortex_explains_shared_agent_memory():
     html = Path("app/static/index.html").read_text(encoding="utf-8")
     js = Path("app/static/app.js").read_text(encoding="utf-8")
     assert "GRAPH · MCP · AGENTS" in html
-    assert "CODEX" in html
-    assert "CURSOR" in html
-    assert "ANTIGRAVITY" in html
+    assert "agents-strip" not in html
+    assert "CODEX · CURSOR · AG" not in html
+    assert '"codex"' in js
+    assert '"cursor"' in js
+    assert '"antigravity"' in js
     assert "Curated Memory Bridge" in js
     assert "Cognee MCP" in js
 
