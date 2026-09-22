@@ -190,7 +190,8 @@ Visual intent:
 - Ralphi MCP tools
 - orbiting agents/connectors
 - real backend-driven stage events only
-- Judge Mode proof buttons: REMEMBER, OBSERVE, GOVERN, SHARE
+- visible answer attribution: Strands, Cognee, Bright Data, Ralphi/InnerOS, Qwen/vLLM, Docker
+- backend proof routes for technical validation: remember, observe, govern, share
 
 ## Service / public URL
 

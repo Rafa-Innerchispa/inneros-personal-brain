@@ -88,7 +88,7 @@ global AMD route from the Windows localhost process list.
 
 Enable Docker Sandboxes only after `sbx ls` succeeds.
 
-Use **PREPARE ACTION**.
+Use **Think + Act**.
 
 Expected flow:
 
@@ -98,7 +98,9 @@ The Docker executor must report `executed`; do not present a fallback as live ex
 
 ## 5b. Prove governance
 
-Use **GOVERN** in Judge Mode.
+Explain that **Think + Act** passes through the deterministic policy gate before
+Docker receives any action. For a consequential action, use the backend
+`/api/proof/govern` route or the smoke test instead of executing it live.
 
 Expected flow:
 

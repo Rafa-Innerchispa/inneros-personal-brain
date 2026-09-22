@@ -48,14 +48,25 @@ Cognee is not a decorative memory cache. It is the central shared dataset that m
 | Docker Sandboxes | Governed execution | Bounded artifact action with evidence |
 | InnerOS / Ralphi IA | Local coordination fabric | Private MCP/A2A route, not the core memory store |
 
-## Judge Mode
+## Demo Evidence
 
-The UI includes four proof buttons backed by `/api/proof/{mode}`:
+The live UI keeps the judge path simple: ask a question, watch the trace, and
+read the source evidence. Each answer shows:
 
-- `REMEMBER`: Cognee recall with dataset/provenance evidence.
-- `OBSERVE`: Bright Data live search, with verified replay clearly labeled only when live search is unavailable.
-- `GOVERN`: consequential action is proposed, policy blocks it, and the proof says `NOT_EXECUTED`.
-- `SHARE`: Agent A writes a harmless marker and Agent B recalls it from Cognee.
+- the Strands route decision;
+- Cognee memory hits from the shared dataset;
+- Bright Data live public-web results, including result titles and URLs;
+- local Qwen/vLLM synthesis;
+- Docker Sandbox evidence only when `Think + Act` is requested;
+- any fallback or verified replay label when a live route is unavailable.
+
+Backend proof routes remain available at `/api/proof/{mode}` for smoke tests and
+technical review:
+
+- `remember`: Cognee recall with dataset/provenance evidence.
+- `observe`: Bright Data live search, with verified replay labeled only when live search is unavailable.
+- `govern`: consequential action is proposed, policy blocks it, and the proof says `NOT_EXECUTED`.
+- `share`: Agent A writes a harmless marker and Agent B recalls it from Cognee.
 
 ## Runtime
 
