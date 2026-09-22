@@ -28,11 +28,23 @@ Explain:
 
 > The web UI and ChatGPT are two clients of the same personal intelligence infrastructure.
 
+Then point to the **Shared Memory Fabric** matrix:
+
+- Cognee is the center and the dataset is `inneros-personal-brain`.
+- Bright Data is the live-world input.
+- Ralphi IA MCP is the ops/coordination layer.
+- Codex, Cursor, Antigravity and Strands are all memory surfaces of the same brain.
+- Gmail is shown as OAuth-gated when credentials are not configured, which is the
+  correct secure state.
+
 ## 3. Prove live-world awareness
 
 Use the existing Bright Data MCP/provider to run a live public-web query.
 
 Show the provider evidence and current search result rather than a prepared screenshot.
+
+If venue networking blocks the provider, show that the UI labels the fallback as
+verified replay. Do not call replay data live.
 
 ## 4. Prove reasoning
 

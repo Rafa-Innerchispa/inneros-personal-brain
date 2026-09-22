@@ -18,6 +18,8 @@ const connectorMeta=[
   ['infra','Infrastructure','Servers + operations']
 ];
 
+const fabricOrder=['personal_brain','brightdata','strands','cognee_mcp','codex','cursor','antigravity','ralphi','gmail'];
+
 let statuses={};
 let seq=0;
 
@@ -28,6 +30,19 @@ function techCard(key,state){
   const m=techMeta[key];
   const cls=state==='ready'||state==='connected'||state==='configured'?'ready':'';
   return '<div class="tech-card '+cls+'" data-card="'+key+'"><span class="dot"></span><div><b>'+m.name+'</b><small>'+m.role+'</small></div><em>'+state.replaceAll('_',' ')+'</em></div>';
+}
+
+function renderFabric(fabric){
+  if(!fabric)return;
+  $('fabricDataset').textContent=fabric.dataset||'dataset';
+  const surfaces=fabric.surfaces||[];
+  const byKey=Object.fromEntries(surfaces.map(x=>[x.key,x]));
+  const ordered=fabricOrder.map(k=>byKey[k]).filter(Boolean);
+  $('fabricMatrix').innerHTML=ordered.map(surface=>{
+    const state=surface.state||'unknown';
+    const cls=['ready','configured'].includes(state)?'ready':state==='pending_auth'?'pending':'optional';
+    return '<div class="fabric-row '+cls+'"><span>'+escapeHtml(surface.label)+'</span><b>'+escapeHtml(state.replaceAll('_',' '))+'</b><small>'+escapeHtml(surface.transport)+'</small></div>';
+  }).join('');
 }
 
 function renderStatus(s){
@@ -65,6 +80,7 @@ function renderStatus(s){
     const reg=$('region-'+key); if(!reg) return;
     reg.classList.toggle('complete',['ready','configured','connected'].includes(val.state));
   });
+  renderFabric(s.memory_fabric);
 }
 
 async function loadStatus(){

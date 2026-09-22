@@ -5,6 +5,7 @@ import pytest
 from app.adapters import DemoMemoryAdapter
 from app.brain import PersonalBrain
 from app.cognee_agent_tools import CogneeAgentMemoryTools
+from app.memory_fabric import build_memory_fabric
 
 
 class NoWeb:
@@ -84,3 +85,37 @@ def test_live_cortex_explains_shared_agent_memory():
     assert "ANTIGRAVITY" in html
     assert "Cognee ↔ Strands" in js
     assert "Cognee MCP" in js
+
+
+def test_memory_fabric_centers_cognee_and_brightdata(monkeypatch):
+    monkeypatch.setenv("COGNEE_SERVICE_URL", "https://example.cognee.test")
+    monkeypatch.setenv("COGNEE_API_KEY", "secret-value")
+    monkeypatch.setenv("BRIGHTDATA_API_TOKEN", "secret-value")
+    monkeypatch.delenv("GMAIL_OAUTH_CLIENT_FILE", raising=False)
+    monkeypatch.delenv("GOOGLE_APPLICATION_CREDENTIALS", raising=False)
+
+    fabric = build_memory_fabric().as_dict()
+    surfaces = {surface["key"]: surface for surface in fabric["surfaces"]}
+
+    assert fabric["central_memory"] == "cognee"
+    assert fabric["dataset"] == "inneros-personal-brain"
+    assert fabric["security"]["secrets_in_frontend"] is False
+    assert fabric["security"]["ralphi_required_for_core_memory"] is False
+    assert surfaces["personal_brain"]["state"] == "ready"
+    assert surfaces["strands"]["transport"] == "direct Cognee agent tools"
+    assert surfaces["brightdata"]["state"] == "ready"
+    assert surfaces["ralphi"]["required_for_core"] is False
+    assert surfaces["gmail"]["state"] == "pending_auth"
+
+
+def test_live_cortex_renders_fabric_matrix():
+    html = Path("app/static/index.html").read_text(encoding="utf-8")
+    js = Path("app/static/app.js").read_text(encoding="utf-8")
+    css = Path("app/static/style.css").read_text(encoding="utf-8")
+
+    assert "SHARED MEMORY FABRIC" in html
+    assert "fabricMatrix" in html
+    assert "fabricOrder" in js
+    assert "renderFabric" in js
+    assert "brightdata" in js
+    assert ".fabric-row" in css

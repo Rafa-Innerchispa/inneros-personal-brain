@@ -4,6 +4,7 @@ import importlib.util
 import os
 import socket
 
+from app.memory_fabric import build_memory_fabric
 from app.sandbox import DockerSandboxExecutor
 
 
@@ -23,6 +24,7 @@ def sponsor_status() -> dict:
     """Return demo-safe readiness only; never expose credentials."""
     docker = DockerSandboxExecutor().smoke()
     mcp_reachable = _tcp_open("127.0.0.1", 8102)
+    memory_fabric = build_memory_fabric().as_dict()
     return {
         "inneros_mcp": {
             "state": "connected" if mcp_reachable else "optional_offline",
@@ -83,4 +85,5 @@ def sponsor_status() -> dict:
             "drive_notion": "via_mcp" if mcp_reachable else "bridge_optional",
             "infrastructure": "via_mcp" if mcp_reachable else "bridge_optional",
         },
+        "memory_fabric": memory_fabric,
     }

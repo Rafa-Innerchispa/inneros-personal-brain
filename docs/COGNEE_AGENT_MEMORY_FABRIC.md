@@ -168,3 +168,40 @@ Ralphi MCP → InnerOS tools / Mongo / Qdrant / apps / infrastructure
 
 This separation is deliberate. Losing Ralphi MCP must not erase the Personal
 Brain's Cognee memory.
+
+## Hackathon winning angle
+
+The product should be presented as a personal intelligence loop, not a generic
+assistant:
+
+```text
+Bright Data observes the live world
+        |
+        v
+Cognee stores verified personal memory and durable facts
+        |
+        v
+Strands reasons with local inference and Cognee agent tools
+        |
+        v
+Docker executes bounded actions
+        |
+        v
+Cognee remembers the verified result
+```
+
+Ralphi IA MCP sits beside the loop as the coordination and operations layer. It
+can assign tasks, carry ecosystem context, and connect other InnerOS surfaces,
+but Cognee remains the central brain so the demo still works without coupling
+core memory to a single coordinator.
+
+The UI exposes this as the **Shared Memory Fabric** matrix. A judge should be
+able to verify:
+
+- Cognee is the central memory dataset: `inneros-personal-brain`.
+- Bright Data is the live search/perception source.
+- Strands has direct Cognee recall/remember tools.
+- Codex, Cursor and Antigravity use the same Cognee MCP/plugin route.
+- Ralphi IA MCP is connected as coordination, not as the only memory owner.
+- Gmail is prepared as an optional OAuth-gated signal source; no password or
+  token is required in Git.
