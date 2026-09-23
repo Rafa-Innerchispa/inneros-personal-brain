@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,7 @@ from app.adapters import (
 )
 from app.brain import PersonalBrain
 from app.demo_memory import seed_in_background, seed_status
+from app.memory_curator import curate_for_cognee
 from app.models import BrainRequest, BrainResponse
 from app.proof_modes import ProofModeRunner
 from app.status import sponsor_status
@@ -148,6 +150,101 @@ async def voiceops_status() -> dict:
             "reason": type(exc).__name__,
             "message": "Local VoiceOps gateway is not reachable from the Personal Brain server.",
         }
+
+
+
+def _is_loopback_host(host: str | None) -> bool:
+    return str(host or "").strip().lower() in {"127.0.0.1", "::1", "localhost"}
+
+
+def _voiceops_shared_memory_receipt(payload: dict) -> tuple[str, dict, dict]:
+    if payload.get("verification_passed") is not True:
+        raise ValueError("verification_passed_required")
+    correlation_id = str(payload.get("correlation_id") or "").strip()
+    summary = str(payload.get("summary") or "").strip()
+    evidence_ref = str(payload.get("evidence_ref") or "").strip()
+    source_truth = str(payload.get("source_truth") or "UNVERIFIED").strip().upper()
+    if not correlation_id:
+        raise ValueError("correlation_id_required")
+    if not summary:
+        raise ValueError("summary_required")
+    if not evidence_ref:
+        raise ValueError("evidence_ref_required")
+    if source_truth not in {"LIVE", "REPLAY", "SYNTHETIC"}:
+        raise ValueError("source_truth_invalid")
+
+    curated = curate_for_cognee(
+        "VoiceOps verified outcome. "
+        f"Correlation: {correlation_id}. "
+        f"Outcome: {summary}. "
+        f"Evidence: {evidence_ref}. "
+        f"Source truth: {source_truth}."
+    )
+    memory_id = hashlib.sha256(
+        f"{correlation_id}|{evidence_ref}".encode("utf-8")
+    ).hexdigest()[:20]
+    metadata = {
+        "source": "voiceops",
+        "kind": "verified_operational_outcome",
+        "correlation_id": correlation_id,
+        "evidence_ref": evidence_ref,
+        "source_truth": source_truth,
+        "verification_passed": True,
+        "memory_policy": curated.policy,
+        "memory_id": memory_id,
+    }
+    receipt = {
+        "ok": True,
+        "stored": True,
+        "memory_id": memory_id,
+        "dataset": os.getenv("COGNEE_DATASET", "inneros-personal-brain"),
+        "source_truth": source_truth,
+        "verification_passed": True,
+        "curated": True,
+    }
+    return curated.text, metadata, receipt
+
+
+@app.post("/api/internal/shared-memory/verified-outcome")
+async def voiceops_store_verified_outcome(request: Request, payload: dict) -> dict:
+    host = request.client.host if request.client else ""
+    if not _is_loopback_host(host):
+        raise HTTPException(status_code=403, detail="loopback_only")
+    try:
+        text, metadata, receipt = _voiceops_shared_memory_receipt(payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    await brain.memory.remember(text, metadata)
+    return receipt
+
+
+@app.get("/api/internal/shared-memory/recall")
+async def voiceops_recall_shared_memory(
+    request: Request,
+    q: str = Query(..., min_length=1, max_length=600),
+    limit: int = Query(5, ge=1, le=8),
+) -> dict:
+    host = request.client.host if request.client else ""
+    if not _is_loopback_host(host):
+        raise HTTPException(status_code=403, detail="loopback_only")
+    hits = await brain.memory.search(q, limit=limit)
+    return {
+        "ok": True,
+        "dataset": os.getenv("COGNEE_DATASET", "inneros-personal-brain"),
+        "count": len(hits),
+        "hits": [
+            {
+                "summary": hit.summary[:600],
+                "source": hit.source,
+                "metadata": {
+                    key: value
+                    for key, value in hit.metadata.items()
+                    if key in {"source", "kind", "correlation_id", "evidence_ref", "source_truth", "verification_passed", "memory_id"}
+                },
+            }
+            for hit in hits
+        ],
+    }
 
 
 @app.post("/api/voiceops/tts")
