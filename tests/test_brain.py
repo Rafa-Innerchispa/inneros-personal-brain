@@ -7,7 +7,7 @@ from app.brain import PersonalBrain
 from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
 from app.memory_curator import curate_for_cognee
 from app.memory_fabric import build_memory_fabric
-from app.main import _voiceops_public_health
+from app.main import _is_loopback_host, _voiceops_public_health, _voiceops_shared_memory_receipt
 from app.models import Evidence
 from app.proof_modes import ProofModeRunner
 
@@ -352,3 +352,43 @@ async def test_project_memory_questions_use_brightdata_in_auto_route():
     assert result.route["route_policy"] == "personal_memory_web"
     assert result.web_hits[0].metadata["no_public_matches"] is True
     assert "brightdata_live_web" in result.route["sources_used"]
+
+
+def test_voiceops_shared_memory_receipt_requires_verified_outcome():
+    with pytest.raises(ValueError, match="verification_passed_required"):
+        _voiceops_shared_memory_receipt(
+            {
+                "correlation_id": "voiceops-001",
+                "summary": "work order created",
+                "evidence_ref": "evidence://voiceops/001",
+                "source_truth": "LIVE",
+                "verification_passed": False,
+            }
+        )
+
+
+def test_voiceops_shared_memory_receipt_curates_secrets_and_builds_safe_receipt():
+    text, metadata, receipt = _voiceops_shared_memory_receipt(
+        {
+            "correlation_id": "voiceops-002",
+            "summary": "Verified action completed using api_key=super-secret at 127.0.0.1",
+            "evidence_ref": "evidence://voiceops/002",
+            "source_truth": "LIVE",
+            "verification_passed": True,
+        }
+    )
+
+    assert "super-secret" not in text
+    assert "127.0.0.1" not in text
+    assert metadata["source"] == "voiceops"
+    assert metadata["verification_passed"] is True
+    assert receipt["stored"] is True
+    assert receipt["source_truth"] == "LIVE"
+    assert len(receipt["memory_id"]) == 20
+
+
+def test_shared_memory_internal_route_is_loopback_only():
+    assert _is_loopback_host("127.0.0.1") is True
+    assert _is_loopback_host("::1") is True
+    assert _is_loopback_host("192.168.1.4") is False
+    assert _is_loopback_host("203.0.113.9") is False
