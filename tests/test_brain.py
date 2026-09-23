@@ -5,6 +5,7 @@ import pytest
 from app.adapters import BrightDataAdapter, DemoMemoryAdapter
 from app.brain import PersonalBrain
 from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
+from app.memory_curator import curate_for_cognee
 from app.memory_fabric import build_memory_fabric
 from app.models import Evidence
 from app.proof_modes import ProofModeRunner
@@ -191,6 +192,36 @@ def test_live_cortex_renders_fabric_matrix():
     assert ".fabric-row" in css
 
 
+def test_voiceops_is_visible_as_local_voice_route():
+    html = Path("app/static/index.html").read_text(encoding="utf-8")
+    js = Path("app/static/app.js").read_text(encoding="utf-8")
+
+    assert "voiceEngineBtn" in html
+    assert "Voice: Browser" in html
+    assert "/api/voiceops/status" in js
+    assert "/api/voiceops/tts" in js
+    assert "/api/voiceops/transcribe" in js
+    assert '"voiceops"' in js
+
+
+def test_cognee_memory_curator_redacts_secrets_and_private_infra():
+    curated = curate_for_cognee(
+        "api_key=03556641-5032-4717-b35c-da265f20e6e7 "
+        "Bearer abcdefghijklmnopqrstuvwxyz123456 "
+        "http://127.0.0.1:8241/mcp /home/rlopez/inneros/file.txt "
+        "C:\\Users\\hrlg\\secret.txt"
+    )
+
+    assert "03556641" not in curated.text
+    assert "Bearer abc" not in curated.text
+    assert "127.0.0.1" not in curated.text
+    assert "/home/rlopez" not in curated.text
+    assert "C:\\Users\\hrlg" not in curated.text
+    assert curated.policy["curated"] is True
+    assert curated.policy["secret_redactions"] >= 2
+    assert curated.policy["private_infra_redactions"] >= 2
+
+
 def test_memory_fabric_reports_distributed_routes():
     fabric = build_memory_fabric().as_dict()
     routes = {route["key"]: route for route in fabric["route_status"]}
@@ -198,6 +229,7 @@ def test_memory_fabric_reports_distributed_routes():
     assert routes["cognee_mcp"]["route_class"] == "LOCAL"
     assert routes["ralphi_mcp_inneros_fabric"]["route_class"] == "TAILSCALE"
     assert routes["qwen_vllm"]["route_class"] == "LOCAL_OR_AMD_ON_DEMAND"
+    assert routes["voiceops"]["route_class"] == "LOCAL"
     assert "Windows localhost" in routes["qwen_vllm"]["evidence"]
 
 

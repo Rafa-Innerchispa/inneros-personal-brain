@@ -5,8 +5,9 @@ import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, Query
-from fastapi.responses import FileResponse, StreamingResponse
+import httpx
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.adapters import (
@@ -26,6 +27,7 @@ from app.status import sponsor_status
 
 app = FastAPI(title="InnerOS Personal Brain", version="0.3.0")
 STATIC_DIR = Path(__file__).resolve().parent / "static"
+VOICEOPS_GATEWAY_URL = os.getenv("VOICEOPS_GATEWAY_URL", "http://127.0.0.1:8200").rstrip("/")
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 
@@ -75,6 +77,144 @@ async def status() -> dict:
     data = sponsor_status()
     data["memory_seed"] = seed_status()
     return data
+
+
+def _voiceops_public_health(health: dict, voices: dict | None = None) -> dict:
+    tts = health.get("tts") or {}
+    whisper = health.get("whisper") or {}
+    vllm = health.get("vllm") or {}
+    qdrant = health.get("qdrant") or {}
+    mcp = health.get("mcp_profile") or health.get("mcp") or {}
+    voice_items = []
+    if voices:
+        for item in voices.get("voices") or []:
+            voice_items.append({
+                "id": item.get("id") or item.get("voice") or item.get("name"),
+                "label": item.get("label") or item.get("name") or item.get("id"),
+                "provider": item.get("provider") or item.get("engine"),
+            })
+    return {
+        "ok": bool(health.get("ok")),
+        "gateway_reachable": True,
+        "local_first": bool(health.get("local_first")),
+        "auth_required": bool(health.get("auth_required")),
+        "cloud_fallback": bool(health.get("cloud_fallback")),
+        "public_urls": health.get("public_urls") or [],
+        "whisper": {
+            "configured": bool(whisper.get("url") or whisper.get("ok")),
+            "ok": whisper.get("ok"),
+        },
+        "tts": {
+            "ready": bool(tts.get("ready")),
+            "default_engine": tts.get("default_engine"),
+            "voices": voice_items,
+        },
+        "vllm": {
+            "ok": bool(vllm.get("ok")),
+            "model": vllm.get("model"),
+        },
+        "qdrant": {
+            "ok": bool(qdrant.get("ok")),
+            "points_count": qdrant.get("points_count"),
+            "collection": qdrant.get("collection"),
+        },
+        "mcp": {
+            "profile": mcp.get("profile"),
+            "visible_tool_count": mcp.get("visible_tool_count"),
+            "full_catalog_access": mcp.get("full_catalog_access"),
+        },
+    }
+
+
+@app.get("/api/voiceops/status")
+async def voiceops_status() -> dict:
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            health_response = await client.get(f"{VOICEOPS_GATEWAY_URL}/api/voice/health")
+            health_response.raise_for_status()
+            voices = None
+            try:
+                voices_response = await client.get(f"{VOICEOPS_GATEWAY_URL}/api/voice/tts/voices")
+                if voices_response.status_code == 200:
+                    voices = voices_response.json()
+            except httpx.HTTPError:
+                voices = None
+            return _voiceops_public_health(health_response.json(), voices)
+    except httpx.HTTPError as exc:
+        return {
+            "ok": False,
+            "gateway_reachable": False,
+            "reason": type(exc).__name__,
+            "message": "Local VoiceOps gateway is not reachable from the Personal Brain server.",
+        }
+
+
+@app.post("/api/voiceops/tts")
+async def voiceops_tts(payload: dict):
+    text = str(payload.get("text") or "").strip()
+    voice = str(payload.get("voice") or "xtts:rafael").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="text_required")
+    try:
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            gateway_response = await client.post(
+                f"{VOICEOPS_GATEWAY_URL}/api/voice/tts/speak",
+                json={"text": text[:1800], "voice": voice},
+            )
+            if gateway_response.status_code in {401, 403} or "login_required" in gateway_response.text:
+                return Response(
+                    json.dumps({
+                        "ok": False,
+                        "reason": "login_required",
+                        "message": "Local VoiceOps TTS is installed but requires an authenticated VoiceOps session.",
+                    }),
+                    status_code=401,
+                    media_type="application/json",
+                )
+            gateway_response.raise_for_status()
+            data = gateway_response.json()
+            audio_url = data.get("audio_url") or data.get("url")
+            if not audio_url:
+                return {"ok": False, "reason": "audio_url_missing", "raw_status": data.get("status")}
+            if audio_url.startswith("/"):
+                audio_url = f"{VOICEOPS_GATEWAY_URL}{audio_url}"
+            audio_response = await client.get(audio_url)
+            audio_response.raise_for_status()
+            return Response(
+                audio_response.content,
+                media_type=audio_response.headers.get("content-type", "audio/mpeg"),
+            )
+    except httpx.HTTPError as exc:
+        return Response(
+            json.dumps({"ok": False, "reason": type(exc).__name__, "message": "Local VoiceOps TTS call failed."}),
+            status_code=502,
+            media_type="application/json",
+        )
+
+
+@app.post("/api/voiceops/transcribe")
+async def voiceops_transcribe(request: Request) -> dict:
+    content = await request.body()
+    if not content:
+        raise HTTPException(status_code=400, detail="audio_required")
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            gateway_response = await client.post(
+                f"{VOICEOPS_GATEWAY_URL}/api/voice/transcribe",
+                files={"audio": ("voice.webm", content, request.headers.get("content-type") or "audio/webm")},
+            )
+            if gateway_response.status_code in {401, 403} or "login_required" in gateway_response.text:
+                return {
+                    "ok": False,
+                    "reason": "login_required",
+                    "message": "Local VoiceOps transcription requires an authenticated VoiceOps session.",
+                }
+            gateway_response.raise_for_status()
+            data = gateway_response.json()
+            transcript = data.get("text") or data.get("transcript") or data.get("result", {}).get("text")
+            return {"ok": bool(transcript), "text": transcript or "", "engine": "voiceops_local"}
+    except httpx.HTTPError as exc:
+        return {"ok": False, "reason": type(exc).__name__, "message": "Local VoiceOps transcription call failed."}
 
 
 @app.get("/api/proof/modes")

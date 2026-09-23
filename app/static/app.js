@@ -6,6 +6,7 @@ const techMeta = {
   docker: { name: "Docker Sandbox", role: "Governed execution", flow: "flow-docker" },
   govern: { name: "Policy Gate", role: "Deterministic action control", flow: "flow-govern" },
   inneros_mcp: { name: "InnerOS / Ralphi", role: "External nervous system", flow: "flow-strands" },
+  voiceops: { name: "VoiceOps", role: "Local speech in/out", flow: "flow-strands" },
   bridge: { name: "Curated Memory Bridge", role: "Safe seed with provenance", flow: "flow-learn" }
 };
 
@@ -18,6 +19,7 @@ const fabricOrder = [
   "cursor",
   "antigravity",
   "ralphi",
+  "voiceops",
   "gmail"
 ];
 
@@ -46,6 +48,11 @@ let cortex = null;
 let attachedContext = "";
 let lastSpokenText = "";
 let recognition = null;
+let voiceEngine = "browser";
+let voiceopsStatus = null;
+let mediaRecorder = null;
+let mediaChunks = [];
+let activeAudio = null;
 
 const cortexNodes = {
   input: { x: 0.94, y: 0.30, color: "#f3f7fb", label: "Prompt" },
@@ -211,6 +218,79 @@ function speakText(text) {
   window.speechSynthesis.speak(utterance);
 }
 
+function setVoiceEngine(nextEngine) {
+  voiceEngine = nextEngine === "local" ? "local" : "browser";
+  const button = $("voiceEngineBtn");
+  if (!button) return;
+  const localReady = Boolean(voiceopsStatus?.ok && voiceopsStatus?.tts?.ready);
+  const locked = Boolean(voiceopsStatus?.auth_required);
+  if (voiceEngine === "local") {
+    button.textContent = locked ? "Voice: Local Locked" : localReady ? "Voice: Local Ready" : "Voice: Local";
+    button.classList.add("selected");
+  } else {
+    button.textContent = "Voice: Browser";
+    button.classList.remove("selected");
+  }
+}
+
+async function loadVoiceOpsStatus() {
+  try {
+    const response = await fetch("/api/voiceops/status", { cache: "no-store" });
+    voiceopsStatus = await response.json();
+    setVoiceEngine(voiceEngine);
+    if (voiceopsStatus?.ok) {
+      statuses.voiceops = {
+        state: voiceopsStatus.auth_required ? "configured" : "ready",
+        label: "Local VoiceOps speech",
+        core_dependency: false,
+      };
+    }
+  } catch {
+    voiceopsStatus = { ok: false, gateway_reachable: false };
+    setVoiceEngine(voiceEngine);
+  }
+}
+
+async function speakWithVoiceOps(text) {
+  const clean = String(text || "").trim();
+  if (!clean) return false;
+  $("speakBtn").textContent = "Local Voice...";
+  $("speakBtn").classList.add("selected");
+  try {
+    const response = await fetch("/api/voiceops/tts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: clean, voice: "xtts:rafael" }),
+    });
+    const contentType = response.headers.get("content-type") || "";
+    if (!response.ok || contentType.includes("application/json")) {
+      const details = contentType.includes("application/json") ? await response.json() : {};
+      addEvent("VoiceOps", "error", details.message || "Local voice route is unavailable; browser voice remains available");
+      return false;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    activeAudio = new Audio(url);
+    activeAudio.onended = () => {
+      URL.revokeObjectURL(url);
+      $("speakBtn").textContent = "Play Reply";
+      $("speakBtn").classList.remove("selected");
+      activeAudio = null;
+    };
+    await activeAudio.play();
+    addEvent("VoiceOps", "complete", "Reply spoken through local VoiceOps");
+    return true;
+  } catch (error) {
+    addEvent("VoiceOps", "error", error.message || "Local TTS failed");
+    return false;
+  } finally {
+    if (!activeAudio) {
+      $("speakBtn").textContent = "Play Reply";
+      $("speakBtn").classList.remove("selected");
+    }
+  }
+}
+
 async function readAttachedFiles(files) {
   const selected = Array.from(files || []);
   if (!selected.length) {
@@ -232,11 +312,10 @@ async function readAttachedFiles(files) {
   updateAttachmentSummary(`${selected.length} file(s) attached for analysis · ${total.toLocaleString()} chars loaded locally.`);
 }
 
-function setupVoiceInput() {
+function setupBrowserVoiceInput() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    $("micBtn").disabled = true;
-    $("micBtn").textContent = "Voice In N/A";
+    addEvent("Voice", "error", "Browser speech recognition is not available here");
     return;
   }
   recognition = new SpeechRecognition();
@@ -264,6 +343,53 @@ function setupVoiceInput() {
       addEvent("Voice", "complete", "Dictation appended to prompt");
     }
   };
+}
+
+async function startLocalVoiceRecording() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    addEvent("VoiceOps", "error", "Local browser recording is not available; using browser dictation if possible");
+    if (recognition) recognition.start();
+    return;
+  }
+  if (mediaRecorder?.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaChunks = [];
+  mediaRecorder = new MediaRecorder(stream);
+  mediaRecorder.ondataavailable = (event) => {
+    if (event.data?.size) mediaChunks.push(event.data);
+  };
+  mediaRecorder.onstart = () => {
+    $("micBtn").classList.add("selected");
+    $("micBtn").textContent = "Stop Recording";
+    addEvent("VoiceOps", "active", "Recording for local transcription");
+  };
+  mediaRecorder.onstop = async () => {
+    stream.getTracks().forEach((track) => track.stop());
+    $("micBtn").classList.remove("selected");
+    $("micBtn").textContent = "Record Voice";
+    const blob = new Blob(mediaChunks, { type: mediaChunks[0]?.type || "audio/webm" });
+    try {
+      const response = await fetch("/api/voiceops/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": blob.type || "audio/webm" },
+        body: blob,
+      });
+      const data = await response.json();
+      if (!data.ok || !data.text) {
+        addEvent("VoiceOps", "error", data.message || "Local transcription unavailable; try Browser voice");
+        return;
+      }
+      const prompt = $("prompt");
+      prompt.value = `${prompt.value.trim()}\n\n${data.text}`.trim();
+      addEvent("VoiceOps", "complete", "Local transcript appended to prompt");
+    } catch (error) {
+      addEvent("VoiceOps", "error", error.message || "Local transcription failed");
+    }
+  };
+  mediaRecorder.start();
 }
 
 function normalizeState(state) {
@@ -975,10 +1101,26 @@ async function runBrain(act) {
 $("thinkBtn").addEventListener("click", () => runBrain(false));
 $("actBtn").addEventListener("click", () => runBrain(true));
 $("micBtn").addEventListener("click", () => {
-  if (recognition) recognition.start();
+  if (voiceEngine === "local") {
+    startLocalVoiceRecording().catch((error) => {
+      addEvent("VoiceOps", "error", error.message || "Could not start local recording");
+    });
+  } else if (recognition) {
+    recognition.start();
+  } else {
+    setupBrowserVoiceInput();
+    if (recognition) recognition.start();
+  }
 });
-$("speakBtn").addEventListener("click", () => {
-  if (!("speechSynthesis" in window)) return;
+$("speakBtn").addEventListener("click", async () => {
+  if (activeAudio) {
+    activeAudio.pause();
+    activeAudio.currentTime = 0;
+    activeAudio = null;
+    $("speakBtn").textContent = "Play Reply";
+    $("speakBtn").classList.remove("selected");
+    return;
+  }
   if (window.speechSynthesis.speaking) {
     window.speechSynthesis.cancel();
     $("speakBtn").textContent = "Play Reply";
@@ -988,10 +1130,22 @@ $("speakBtn").addEventListener("click", () => {
   if (lastSpokenText) {
     $("speakBtn").textContent = "Stop Voice";
     $("speakBtn").classList.add("selected");
-    speakText(lastSpokenText);
+    if (voiceEngine === "local") {
+      const spoken = await speakWithVoiceOps(lastSpokenText);
+      if (!spoken) speakText(lastSpokenText);
+    } else {
+      speakText(lastSpokenText);
+    }
   } else {
     addEvent("Voice", "active", "No agent response to play yet");
   }
+});
+$("voiceEngineBtn").addEventListener("click", () => {
+  setVoiceEngine(voiceEngine === "local" ? "browser" : "local");
+  const note = voiceEngine === "local"
+    ? "Using local VoiceOps first; browser voice remains fallback when VoiceOps requires login"
+    : "Using browser speech APIs";
+  addEvent("Voice", "complete", note);
 });
 $("fileInput").addEventListener("change", (event) => {
   readAttachedFiles(event.target.files).catch((error) => {
@@ -1017,6 +1171,8 @@ try {
   setTheme("dark");
 }
 setupCortex();
-setupVoiceInput();
+setupBrowserVoiceInput();
 loadStatus();
+loadVoiceOpsStatus();
 setInterval(loadStatus, 15000);
+setInterval(loadVoiceOpsStatus, 30000);

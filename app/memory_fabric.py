@@ -126,6 +126,7 @@ def build_memory_fabric() -> MemoryFabric:
         os.getenv("BRIGHTDATA_API_TOKEN")
         or (os.getenv("BRIGHTDATA_API_KEY") and os.getenv("BRIGHTDATA_SERP_ZONE", os.getenv("BRIGHTDATA_ZONE", "inneros")))
     )
+    voiceops_ready = _tcp_open("127.0.0.1", int(os.getenv("VOICEOPS_GATEWAY_PORT", "8200")))
     gmail_auth_ready = bool(os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or os.getenv("GMAIL_OAUTH_CLIENT_FILE"))
 
     return MemoryFabric(
@@ -152,6 +153,13 @@ def build_memory_fabric() -> MemoryFabric:
                 "LOCAL_OR_AMD_ON_DEMAND",
                 "ready" if distributed_qwen_state == "ready" else "configured",
                 "AMD route may be on-demand; do not infer global state from Windows localhost",
+            ),
+            _route(
+                "VoiceOps",
+                "Local speech input/output route",
+                "LOCAL",
+                "ready" if voiceops_ready else "configured",
+                "Voice gateway handles Whisper transcription plus XTTS/Piper speech when authenticated",
             ),
             _route(
                 "Personal Brain public demo",
@@ -228,6 +236,14 @@ def build_memory_fabric() -> MemoryFabric:
                 role="Optional local sovereign fabric and coordination gateway",
                 state="ready" if distributed_ralphi_ready or ralphi_ready else "optional",
                 evidence="Coordination gateway, not the Cognee shared memory store",
+            ),
+            FabricSurface(
+                key="voiceops",
+                label="InnerOS VoiceOps",
+                transport="http://127.0.0.1:8200",
+                role="Local speech in/out for the Personal Brain without cloud fallback",
+                state="ready" if voiceops_ready else "configured",
+                evidence="Whisper + XTTS/Piper gateway; browser voice remains available when session auth is required",
             ),
             FabricSurface(
                 key="gmail",

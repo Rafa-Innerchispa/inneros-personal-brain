@@ -33,6 +33,7 @@ def sponsor_status() -> dict:
     docker = DockerSandboxExecutor().smoke()
     mcp_reachable = _tcp_open("127.0.0.1", 8102)
     cognee_mcp_reachable = _tcp_open("127.0.0.1", int(os.getenv("COGNEE_MCP_PORT", "8241")))
+    voiceops_reachable = _tcp_open("127.0.0.1", int(os.getenv("VOICEOPS_GATEWAY_PORT", "8200")))
     llm_url = os.getenv("LOCAL_LLM_BASE_URL", "")
     local_model_ready = bool(llm_url and _url_tcp_open(llm_url))
     memory_fabric = build_memory_fabric().as_dict()
@@ -94,6 +95,12 @@ def sponsor_status() -> dict:
             "state": "ready" if local_model_ready else "configured" if os.getenv("LOCAL_LLM_BASE_URL") else "default_local_route",
             "label": "Local Qwen / vLLM inference",
             "core_dependency": True,
+        },
+        "voiceops": {
+            "state": "ready" if voiceops_reachable else "configured",
+            "label": "Local VoiceOps speech input/output",
+            "core_dependency": False,
+            "transport": "local_gateway",
         },
         "connectors": {
             "mcp_reachable": mcp_reachable,

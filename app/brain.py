@@ -7,6 +7,7 @@ from typing import Awaitable, Callable
 
 from app.models import BrainResponse, Evidence
 from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
+from app.memory_curator import curate_for_cognee
 from app.sandbox import DockerSandboxExecutor
 
 
@@ -516,9 +517,10 @@ class PersonalBrain:
                 "message": "Writing the verified outcome back to persistent memory",
                 "dataset": dataset,
             })
+            curated = curate_for_cognee(f"Personal Brain handled: {prompt}\nResult: {answer[:500]}")
             await self.memory.remember(
-                f"Personal Brain handled: {prompt}\nResult: {answer[:500]}",
-                {"trace": trace, "actions": actions},
+                curated.text,
+                {"trace": trace, "actions": actions, "memory_policy": curated.policy},
             )
             tool_calls["cognee_remember"] += 1
             trace.append("remember:store-outcome")
