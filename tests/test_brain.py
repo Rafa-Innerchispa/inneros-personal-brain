@@ -7,6 +7,7 @@ from app.brain import PersonalBrain
 from app.cognee_agent_tools import CogneeAgentMemoryTools, CogneeMemoryStore
 from app.memory_curator import curate_for_cognee
 from app.memory_fabric import build_memory_fabric
+from app.main import _voiceops_public_health
 from app.models import Evidence
 from app.proof_modes import ProofModeRunner
 
@@ -202,6 +203,30 @@ def test_voiceops_is_visible_as_local_voice_route():
     assert "/api/voiceops/tts" in js
     assert "/api/voiceops/transcribe" in js
     assert '"voiceops"' in js
+
+
+def test_voiceops_public_health_accepts_string_whisper_and_filters_private_urls():
+    status = _voiceops_public_health(
+        {
+            "ok": True,
+            "whisper": "http://127.0.0.1:9001",
+            "tts": {"ready": True, "default_engine": "xtts-v2"},
+            "vllm": {"ok": True, "model": "Qwen"},
+            "qdrant": {"ok": True, "collection": "inneros_kb", "points_count": 3},
+            "mcp": {"profile": "voice_owner_compact", "visible_tool_count": 43, "full_catalog_access": True},
+            "public_urls": ["https://voz.pcdoctor.ai"],
+            "auth_required": True,
+            "cloud_fallback": False,
+        },
+        {"voices": [{"id": "xtts:rafael", "label": "Rafael", "provider": "xtts-v2"}]},
+    )
+
+    assert status["ok"] is True
+    assert status["whisper"]["configured"] is True
+    assert status["tts"]["voices"][0]["id"] == "xtts:rafael"
+    dumped = str(status)
+    assert "127.0.0.1:9001" not in dumped
+    assert "https://voz.pcdoctor.ai" in dumped
 
 
 def test_cognee_memory_curator_redacts_secrets_and_private_infra():

@@ -85,6 +85,7 @@ def _voiceops_public_health(health: dict, voices: dict | None = None) -> dict:
     vllm = health.get("vllm") or {}
     qdrant = health.get("qdrant") or {}
     mcp = health.get("mcp_profile") or health.get("mcp") or {}
+    whisper_is_mapping = isinstance(whisper, dict)
     voice_items = []
     if voices:
         for item in voices.get("voices") or []:
@@ -101,8 +102,8 @@ def _voiceops_public_health(health: dict, voices: dict | None = None) -> dict:
         "cloud_fallback": bool(health.get("cloud_fallback")),
         "public_urls": health.get("public_urls") or [],
         "whisper": {
-            "configured": bool(whisper.get("url") or whisper.get("ok")),
-            "ok": whisper.get("ok"),
+            "configured": bool((whisper.get("url") or whisper.get("ok")) if whisper_is_mapping else whisper),
+            "ok": whisper.get("ok") if whisper_is_mapping else None,
         },
         "tts": {
             "ready": bool(tts.get("ready")),
