@@ -129,6 +129,61 @@ class PersonalBrain:
         )
         return any(marker in text for marker in markers)
 
+    @staticmethod
+    def _has_durable_project_signal(prompt: str, answer: str) -> bool:
+        text = f" {prompt.lower()} {answer.lower()} "
+        durable_markers = (
+            "inneros",
+            "innerchispa",
+            "pc doctor",
+            "pcdoctor",
+            "ralphi",
+            "ralfi",
+            "cognee",
+            "bright data",
+            "brightdata",
+            "qwen",
+            "vllm",
+            "docker",
+            "voiceops",
+            "github",
+            "repo",
+            "repositorio",
+            "hackathon",
+            "personal brain",
+            "a2a",
+            "mcp",
+            "codex",
+            "cursor",
+            "antigravity",
+        )
+        return any(marker in text for marker in durable_markers)
+
+    @staticmethod
+    def _looks_like_no_information_artifact(prompt: str, answer: str) -> bool:
+        text = f" {prompt.lower()} {answer.lower()} "
+        no_info_markers = (
+            "no information about",
+            "no information on",
+            "no matching memory",
+            "no hay información",
+            "no hay informacion",
+            "no se encontró información",
+            "no se encontro informacion",
+        )
+        return any(marker in text for marker in no_info_markers)
+
+    def _should_persist_shared_memory(self, prompt: str, answer: str, act: bool, route: dict, actions: list[dict]) -> tuple[bool, str]:
+        if route["mode"] == "local_only":
+            return False, "local_only route"
+        if actions or act:
+            return True, "governed action evidence"
+        if self._is_identity_or_memory_query(prompt) and self._has_durable_project_signal(prompt, answer):
+            return True, "identity/project memory signal"
+        if self._has_durable_project_signal(prompt, answer) and not self._looks_like_no_information_artifact(prompt, answer):
+            return True, "durable project context"
+        return False, "not durable shared memory"
+
     def _plan_route(self, prompt: str, route_mode: str | None) -> dict:
         mode = self._normalize_route_mode(route_mode)
         personal = self._is_identity_or_memory_query(prompt)
@@ -517,18 +572,30 @@ class PersonalBrain:
                 "message": "Writing the verified outcome back to persistent memory",
                 "dataset": dataset,
             })
-            curated = curate_for_cognee(f"Personal Brain handled: {prompt}\nResult: {answer[:500]}")
-            await self.memory.remember(
-                curated.text,
-                {"trace": trace, "actions": actions, "memory_policy": curated.policy},
-            )
-            tool_calls["cognee_remember"] += 1
-            trace.append("remember:store-outcome")
+            should_persist, persist_reason = self._should_persist_shared_memory(prompt, answer, act, route, actions)
+            if should_persist:
+                curated = curate_for_cognee(f"Personal Brain handled: {prompt}\nResult: {answer[:500]}")
+                await self.memory.remember(
+                    curated.text,
+                    {
+                        "trace": trace,
+                        "actions": actions,
+                        "memory_policy": curated.policy,
+                        "memory_type": "curated_run_outcome",
+                        "persist_reason": persist_reason,
+                    },
+                )
+                tool_calls["cognee_remember"] += 1
+                trace.append("remember:store-outcome")
+                learn_message = "Outcome stored in Cognee"
+            else:
+                trace.append("remember:write-skipped-not-durable")
+                learn_message = f"Cognee write skipped: {persist_reason}"
             await self._emit(emit, {
                 "stage": "learn",
                 "technology": "cognee",
                 "state": "complete",
-                "message": "Outcome stored in Cognee",
+                "message": learn_message,
                 "dataset": dataset,
             })
 

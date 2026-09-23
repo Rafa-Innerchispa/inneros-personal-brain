@@ -99,6 +99,18 @@ async def test_brain_remembers_outcome():
 
 
 @pytest.mark.asyncio
+async def test_brain_does_not_store_non_durable_queries():
+    memory = DemoMemoryAdapter(seed=["InnerOS builds local-first AI systems."])
+    brain = FastTestBrain(memory=memory, web=NoWeb())
+
+    result = await brain.answer("pizza", act=False)
+
+    assert "remember:write-skipped-not-durable" in result.trace
+    assert "remember:store-outcome" not in result.trace
+    assert len(memory.seed) == 1
+
+
+@pytest.mark.asyncio
 async def test_brain_emits_real_cognitive_stages():
     memory = DemoMemoryAdapter(seed=["Physical Guardian is an InnerOS project."])
     brain = FastTestBrain(memory=memory, web=NoWeb())
